@@ -17,7 +17,7 @@
  *    along with this program; if not, write to the Free Software
  *    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-package moa.streams.filters;
+package moa.streams.filters.privacy.noiseaddition;
 
 import java.util.Random;
 
@@ -27,6 +27,7 @@ import moa.core.GaussianEstimator;
 import moa.core.InstancesHeader;
 import moa.options.FloatOption;
 import moa.options.IntOption;
+import moa.streams.filters.AbstractStreamFilter;
 import weka.core.Instance;
 
 /**

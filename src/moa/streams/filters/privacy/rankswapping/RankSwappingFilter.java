@@ -1,10 +1,12 @@
-package moa.streams.filters;
+package moa.streams.filters.privacy.rankswapping;
 import java.util.ArrayList;
 import java.util.Random;
 
 import weka.core.Instance;
 import moa.core.InstancesHeader;
 import moa.options.IntOption;
+import moa.streams.filters.AbstractStreamFilter;
+import moa.streams.filters.privacy.Pair;
 
 import java.util.Vector;
 

@@ -1,4 +1,4 @@
-package moa.streams.filters;
+package moa.streams.filters.privacy;
 
 
 public class Pair implements Comparable<Pair>{

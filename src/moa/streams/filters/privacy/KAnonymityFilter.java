@@ -1,4 +1,4 @@
-package moa.streams.filters;
+package moa.streams.filters.privacy;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Vector;
@@ -9,6 +9,7 @@ import java.util.Map;
 
 import moa.core.InstancesHeader;
 import moa.options.IntOption;
+import moa.streams.filters.AbstractStreamFilter;
 import weka.core.Instance;
 
 

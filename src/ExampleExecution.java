@@ -1,6 +1,6 @@
 import moa.streams.ArffFileStream;
-import moa.streams.filters.KAnonymityFilter;
-import moa.streams.filters.RankSwappingFilter;
+import moa.streams.filters.privacy.KAnonymityFilter;
+import moa.streams.filters.privacy.rankswapping.RankSwappingFilter;
 import moa.classifiers.drift.SingleClassifierDrift;
 import moa.classifiers.*;
 
