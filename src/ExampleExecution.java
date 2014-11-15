@@ -41,10 +41,10 @@ public class ExampleExecution {
 		KAnonymityFilter kAFilter = new KAnonymityFilter();
 		kAFilter.setInputStream (stream);
 		//kAFilter.pOption.setValue(3);
-		kAFilter.kOption.setValue(3);
-		kAFilter.bOption.setValue(10);
+		kAFilter.kAnonymityValueOption.setValue(3);
+		kAFilter.bufferSizeOption.setValue(10);
 		
-		System.out.println("kOption " + kAFilter.kOption.getValue());
+		System.out.println("kOption " + kAFilter.kAnonymityValueOption.getValue());
 		
 		Classifier learner = new SingleClassifierDrift(); 
 		learner.setModelContext(kAFilter.getHeader()); 

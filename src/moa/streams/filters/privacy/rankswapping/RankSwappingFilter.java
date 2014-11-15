@@ -6,7 +6,7 @@ import weka.core.Instance;
 import moa.core.InstancesHeader;
 import moa.options.IntOption;
 import moa.streams.filters.AbstractStreamFilter;
-import moa.streams.filters.privacy.Pair;
+import moa.streams.filters.privacy.IndexValuePair;
 
 import java.util.Vector;
 
@@ -150,11 +150,11 @@ public class RankSwappingFilter extends AbstractStreamFilter{
 	
 	private int selectSwap(Vector<Instance> bufferInstances, Vector< Vector<Boolean> > alreadySwapped, int index){	
 		
-		ArrayList<Pair> list = new ArrayList<Pair>();
+		ArrayList<IndexValuePair> list = new ArrayList<IndexValuePair>();
 		
 		for (int i=0; i< bufferInstances.size();++i){
 			if (!alreadySwapped.get(i).get(index)){
-				Pair a = new Pair(i, bufferInstances.get(i).value(index) );
+				IndexValuePair a = new IndexValuePair(i, bufferInstances.get(i).value(index) );
 				list.add(a);
 			}
 		}

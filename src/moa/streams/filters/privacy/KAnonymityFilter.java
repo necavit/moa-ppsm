@@ -1,11 +1,10 @@
 package moa.streams.filters.privacy;
 import java.util.ArrayList;
-import java.util.Random;
-import java.util.Vector;
-import java.util.PriorityQueue;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 
 import moa.core.InstancesHeader;
 import moa.options.IntOption;
@@ -15,39 +14,39 @@ import weka.core.Instance;
 
 public class KAnonymityFilter extends AbstractStreamFilter{
 	
+	private static final long serialVersionUID = 6339323265758039657L;
 	
-	protected Vector<Instance> bufferInstances;
-	protected boolean startToProcess;
-	protected Vector<Boolean> alreadyAnonymized;
+	private Vector<Instance> instancesBuffer;
 	
+	private boolean startToProcess;
+	
+	private Vector<Boolean> alreadyAnonymizedInstances;
+	
+	/**
+	 * The 'K' value for the k-anonymity property to satisfy.
+	 */
+	public IntOption kAnonymityValueOption = new IntOption("kAnonimty", 'k',
+            "k value for the k-anonymity", 3);
+	
+	/**
+	 * The size of the historical buffer considered before starting to perform the filtering.
+	 */
+    public IntOption bufferSizeOption = new IntOption("bufferLength", 'b',
+            "length of the historical buffer considered to perform rank swapping", 10);
 	
 	public KAnonymityFilter(){
     	super();
-    	//this.random = new Random(this.randomSeedOption.getValue());
-    	bufferInstances = new Vector<Instance>();
-    	alreadyAnonymized =  new Vector<Boolean>();
-    	startToProcess = false;
+    	this.instancesBuffer = new Vector<Instance>();
+    	this.alreadyAnonymizedInstances =  new Vector<Boolean>();
+    	this.startToProcess = false;
     }
 	
 	@Override
 	protected void restartImpl() {
-		//this.random = new Random(this.randomSeedOption.getValue());
-    	bufferInstances = new Vector<Instance>();
-    	alreadyAnonymized =  new Vector<Boolean>();
-    	startToProcess = false;
+		this.instancesBuffer = new Vector<Instance>();
+		this.alreadyAnonymizedInstances =  new Vector<Boolean>();
+		this.startToProcess = false;
 	}
-	
-	public IntOption kOption = new IntOption("kAnonimty", 'k',
-            "k value for the k-anonymity", 3);
-    
-    /*
-     * length of the buffer considered to perform the swapping 
-     * */
-    public IntOption bOption = new IntOption("bufferLength", 'b',
-            "length of the historical buffer considered to perform rank swapping", 10);
-	
-	
-	
 	
 	@Override
 	public InstancesHeader getHeader() {
@@ -55,115 +54,146 @@ public class KAnonymityFilter extends AbstractStreamFilter{
 	}
 
 	@Override
+	public void getDescription(StringBuilder arg0, int arg1) {
+		// TODO Auto-generated method stub
+	}
+	
+	@Override
+	public boolean hasMoreInstances() {
+		return this.inputStream.hasMoreInstances() || (instancesBuffer.size() > 0);
+	}
+	
+	@Override
 	public Instance nextInstance() {
-		int top = 0;
-		if (bufferInstances.size() == bOption.getValue() )
-			startToProcess = true;
-
+		//fetch newer instances from the input stream
 		if (this.inputStream.hasMoreInstances()){
-			Instance inst = (Instance) this.inputStream.nextInstance().copy();
-		
-			Vector<Boolean> vec = new Vector<Boolean>();
-			for (int i=0; i < inst.numAttributes()-1; ++i) vec.add(false);
+			Instance instance = (Instance) this.inputStream.nextInstance().copy();		
 			
-			bufferInstances.add(inst);
-			alreadyAnonymized.add(false);
+			instancesBuffer.add(instance);
+			alreadyAnonymizedInstances.add(false);
 		}		
 		
+		//check whether to begin processing the buffer
+		if (instancesBuffer.size() == bufferSizeOption.getValue()) {
+			startToProcess = true;
+		}
+		
+		//process or return null
 		if (startToProcess){
-			
-			if (!alreadyAnonymized.get(top)){//anonymized the instance only if it is not yet anonymized
-				ArrayList<Pair> topK = new  ArrayList<Pair>();
-				Instance query = bufferInstances.get(top);
-				//iterate over all the instances in the actual buffer
-				for (int i=1; i<bufferInstances.size();++i){
-					//consider only instance not yet anonymized
-					if (!alreadyAnonymized.get(i)){
-						double dist = distance(query,bufferInstances.get(i));
-						
-						//check if we select more than K-1 neighbors, if yes delete the farthest one
-						if ( topK.size() != (kOption.getValue()-1) || dist <= topK.get(topK.size()-1).value){
-							topK.add(new Pair(i, dist));
-							Collections.sort(topK);
-						}
-						
-						if (topK.size() >= kOption.getValue()){
-							topK.remove(topK.size()-1);
-						}
-					}
-				}
-				//anonymized the query instances and its k-1 nearest neighbors
-				ArrayList<Integer> idx = new ArrayList<Integer>();
-				idx.add(top);
-				for (int i=0; i<topK.size();++i) {
-					idx.add( topK.get(i).index);
-					alreadyAnonymized.set(topK.get(i).index,true);
-				}
-				
-				for (int j=0; j < query.numAttributes();++j){
-					if (j != query.classIndex()){//if it is not the class
-						double avg = 0;
-						double modeValue = 0.0;
-						int countMaxModeValue = 0;
-						HashMap<Double,Integer> map = new HashMap<Double,Integer>();
-						for (int i=0; i<idx.size();++i){
-							if (query.attribute(j).isNumeric()){
-								avg+= bufferInstances.get(idx.get(i)).value(j);
-							}else{
-								Integer temp = 0;
-								if (map.containsValue(bufferInstances.get(idx.get(i)).value(j))){
-									temp = map.get(bufferInstances.get(idx.get(i)).value(j));
-								}
-								map.put(bufferInstances.get(idx.get(i)).value(j),temp+1);
-							}
-						}
-						for (Map.Entry<Double, Integer> entry : map.entrySet()) {
-							Double key = entry.getKey();
-							Integer value = entry.getValue();
-							if (value > countMaxModeValue){
-								countMaxModeValue = value;
-								modeValue = key;
-							}
-						}
-						double newValue = avg = avg / idx.size();
-						if (!query.attribute(j).isNumeric())newValue = modeValue;
-						
-						for (int i=0; i<idx.size();++i){
-								bufferInstances.get(idx.get(i)).setValue(j,newValue);
-						}
-					}
-				}
-			}
-			
-			
-			alreadyAnonymized.remove(0);
-			return bufferInstances.remove(0);
-		}else {
+			//return the next anonymized instance
+			return processNextInstance();
+		}
+		else {
+			//no instance can be returned if the buffer is not yet prepared to be processed
 			return null;
 		}
 	}
-
-	@Override
-	public void getDescription(StringBuilder arg0, int arg1) {
-		// TODO Auto-generated method stub
 	
+	/**
+	 * Processes the next instance of the buffer.
+	 * 
+	 * @return the next anonymized instance
+	 */
+	private Instance processNextInstance() {
+		final int top = 0; //semantic variable (it is indeed useless)
+		
+		//anonymize the next instance only if it is not yet anonymized
+		if (!alreadyAnonymizedInstances.get(top)){
+			anonymizeNextInstance();
+		}
+		
+		//remove the instance from the buffer and from the list of anonymized instances
+		alreadyAnonymizedInstances.remove(top);
+		Instance anonymizedInstance = instancesBuffer.remove(top);
+		return anonymizedInstance;
+	}
+	
+	/**
+	 * Anonymizes the next instance.
+	 */
+	private void anonymizeNextInstance() {
+		final int top = 0; //semantic variable (it is indeed useless)
+		
+		List<IndexValuePair> kNearestNeighbors = new ArrayList<IndexValuePair>();
+		Instance queryInstance = instancesBuffer.get(top);
+		
+		//iterate over all the instances in the actual buffer (except the top one)
+		for (int i = 1; i < instancesBuffer.size();++i){
+			//consider only instance not yet anonymized
+			if (!alreadyAnonymizedInstances.get(i)){
+				double distanceToQuery = distance(queryInstance, instancesBuffer.get(i));
+				
+				//check if we select more than K-1 neighbors, if yes delete the farthest one
+				if (kNearestNeighbors.size() != (kAnonymityValueOption.getValue() - 1) 
+						|| distanceToQuery <= kNearestNeighbors.get(kNearestNeighbors.size() - 1).value) {
+					kNearestNeighbors.add(new IndexValuePair(i, distanceToQuery));
+					Collections.sort(kNearestNeighbors);
+				}
+				
+				if (kNearestNeighbors.size() >= kAnonymityValueOption.getValue()){
+					kNearestNeighbors.remove(kNearestNeighbors.size()-1);
+				}
+			}
+		}
+		
+		//anonymize the query instances and its k-1 nearest neighbors
+		List<Integer> idx = new ArrayList<Integer>();
+		idx.add(top);
+		for (int i=0; i<kNearestNeighbors.size();++i) {
+			idx.add( kNearestNeighbors.get(i).index);
+			alreadyAnonymizedInstances.set(kNearestNeighbors.get(i).index,true);
+		}
+		
+		for (int j=0; j < queryInstance.numAttributes();++j){
+			if (j != queryInstance.classIndex()){//if it is not the class
+				double avg = 0;
+				double modeValue = 0.0;
+				int countMaxModeValue = 0;
+				Map<Double,Integer> map = new HashMap<Double,Integer>();
+				for (int i=0; i<idx.size();++i){
+					if (queryInstance.attribute(j).isNumeric()){
+						avg+= instancesBuffer.get(idx.get(i)).value(j);
+					}else{
+						Integer temp = 0;
+						if (map.containsValue(instancesBuffer.get(idx.get(i)).value(j))){
+							temp = map.get(instancesBuffer.get(idx.get(i)).value(j));
+						}
+						map.put(instancesBuffer.get(idx.get(i)).value(j),temp+1);
+					}
+				}
+				for (Map.Entry<Double, Integer> entry : map.entrySet()) {
+					Double key = entry.getKey();
+					Integer value = entry.getValue();
+					if (value > countMaxModeValue){
+						countMaxModeValue = value;
+						modeValue = key;
+					}
+				}
+				double newValue = avg = avg / idx.size();
+				if (!queryInstance.attribute(j).isNumeric())newValue = modeValue;
+				
+				for (int i=0; i<idx.size();++i){
+						instancesBuffer.get(idx.get(i)).setValue(j,newValue);
+				}
+			}
+		}
 	}
 
-
-
-	@Override
-	public boolean hasMoreInstances() {
-		return this.inputStream.hasMoreInstances() || (bufferInstances.size()>0);
-	}
-
-	private double distance(Instance a, Instance b){
+	/**
+	 * Computes the distance between two given instances.
+	 * 
+	 * @param x the first instance
+	 * @param y the second instance
+	 * @return the distance between the given instances
+	 */
+	private double distance(Instance x, Instance y){
 		double dist = 0;
-		for (int i=0; i < a.numAttributes();++i){
-			if (i != a.classIndex()){
-				if (a.attribute(i).isNumeric()){
-					dist+= (a.value(i) - b.value(i)) * (a.value(i) - b.value(i));
-				}else{
-					dist+= (a.value(i) !=  b.value(i))?1:0;
+		for (int i=0; i < x.numAttributes(); ++i){
+			if (i != x.classIndex()) { //skip all those variables that are the target class
+				if (x.attribute(i).isNumeric()){
+					dist += (x.value(i) - y.value(i)) * (x.value(i) - y.value(i));
+				} else {
+					dist += (x.value(i) !=  y.value(i)) ? 1.0 : 0.0;
 				}
 			}
 		}
