@@ -1,3 +1,4 @@
+package test;
 import moa.streams.ArffFileStream;
 import moa.streams.filters.privacy.microaggregation.KAnonymityFilter;
 import moa.streams.filters.privacy.rankswapping.RankSwappingFilter;
