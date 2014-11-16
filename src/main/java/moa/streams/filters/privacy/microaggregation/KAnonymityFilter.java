@@ -20,7 +20,7 @@ import weka.core.Instance;
  * <br>
  * TODO comment how the algorithm works!!
  */
-public class KAnonymityFilter extends AbstractStreamFilter{
+public class KAnonymityFilter extends AbstractStreamFilter {
 	
 	/** Serial version identifier, to allow this class to be {@link Serializable}. */
 	private static final long serialVersionUID = 6339323265758039657L;

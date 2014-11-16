@@ -1,57 +1,54 @@
 package it.moa.streams.filters.privacy;
 
+import moa.classifiers.Classifier;
+import moa.classifiers.drift.SingleClassifierDrift;
 import moa.streams.ArffFileStream;
 import moa.streams.filters.privacy.microaggregation.KAnonymityFilter;
-import moa.streams.filters.privacy.rankswapping.RankSwappingFilter;
-import moa.classifiers.drift.SingleClassifierDrift;
-import moa.classifiers.*;
-
-import java.io.File;
-import java.io.ObjectInputStream.GetField;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-
-import weka.core.Attribute;
 import weka.core.Instance;
 
 
 public class ExampleExecution {
+	
 	public static void main(String[]args){
-		//String path= "/Users/dinoienco/RICERCA/project/Waikato/catChangeDet/elecNormNew.arff";
-		//String path= "/Users/dinoienco/Documents/workspace/Moa/src/prova.arff";
 		
-		//String path= "/Users/dinoienco/RICERCA/project/Waikato/batchIncremental/elecNormNew.arff";
+		String path = "/home/necavit/workspace_TFG/moa-ppsm/moa-ppsm/src/it/resources/prova.arff";
 		
-		File file = null;
-		try {
-			file = new File(ExampleExecution.class.getResource("prova.arff").toURI());
-		} catch (URISyntaxException e) {
-			e.printStackTrace();
-		}
-		String path = file.getPath();
+		//setting '-1' to the classIndex argument, we are telling the ArffFileStream to
+		//  consider the last attribute as the class (target) one
+		ArffFileStream stream = new ArffFileStream(path, -1);
 		
-		ArffFileStream	stream	= new ArffFileStream(path,-1);
+		/* FIXME this should not be necessary, given the previous comment!
 		int nAttrs = stream.getHeader().numAttributes();
-		stream.classIndexOption.setValue(nAttrs-1);
-		ArrayList<Attribute> attributes = new ArrayList<Attribute>();
-		for(int i=0; i<stream.getHeader().numAttributes();++i){
-			attributes.add( stream.getHeader().attribute(i));
-		}
+		stream.classIndexOption.setValue(nAttrs - 1);
+		*/
+		
+		//FIXME delete this code if necessary
 		//stream.prepareForUse();
 		//int windowSize = Integer.parseInt(args[1]);
 		//RankSwappingFilter kAFilter = new RankSwappingFilter();
-		KAnonymityFilter kAFilter = new KAnonymityFilter();
-		kAFilter.setInputStream (stream);
 		//kAFilter.pOption.setValue(3);
-		kAFilter.kAnonymityValueOption.setValue(3);
-		kAFilter.bufferSizeOption.setValue(10);
 		
-		System.out.println("kOption " + kAFilter.kAnonymityValueOption.getValue());
+		//build filter
+		KAnonymityFilter filter = new KAnonymityFilter(stream);
+		filter.bufferSizeOption.setValue(10); //the ARFF file has very few instances!
 		
+		//build learner (classifier)
 		Classifier learner = new SingleClassifierDrift(); 
-		learner.setModelContext(kAFilter.getHeader()); 
+		learner.setModelContext(filter.getHeader()); 
 		learner.prepareForUse();
 		
+		//execute!
+		while (filter.hasMoreInstances()) {
+			Instance instance = filter.nextInstance();
+			if (instance != null) {
+				System.out.println("instance: " + instance.toString());
+			}
+			else {
+				System.out.println("nextInstance() returned null instance: the anonymization buffer is still filling up...");
+			}
+		}
+		
+		/* TODO OLD LEGACY CODE! Remove or think what to do with it!
 		double numberSamplesCorrect = 0;
 		double totNumInstProcessed = 0;
 		String st = "";
@@ -71,7 +68,7 @@ public class ExampleExecution {
 		}
 		
 		System.out.println(st);
-		
+		*/
 	}
 }
 
