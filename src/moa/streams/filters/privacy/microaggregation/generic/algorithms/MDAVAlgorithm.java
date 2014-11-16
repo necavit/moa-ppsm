@@ -1,4 +1,4 @@
-package moa.streams.filters.privacy.microaggregation.algorithms;
+package moa.streams.filters.privacy.microaggregation.generic.algorithms;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -11,8 +11,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Vector;
 
-import moa.streams.filters.privacy.microaggregation.Partition;
-import moa.streams.filters.privacy.microaggregation.PartitionAlgorithm;
+import moa.streams.filters.privacy.microaggregation.generic.Partition;
+import moa.streams.filters.privacy.microaggregation.generic.PartitionAlgorithm;
 import weka.core.Instance;
 
 public class MDAVAlgorithm implements PartitionAlgorithm {

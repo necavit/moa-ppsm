@@ -1,4 +1,4 @@
-package moa.streams.filters.privacy.microaggregation;
+package moa.streams.filters.privacy.microaggregation.generic;
 
 
 public interface AggregationStrategy {
