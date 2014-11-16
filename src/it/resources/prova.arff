@@ -1,0 +1,23 @@
+@relation prova
+
+@attribute  attribute1 {a,b,c}
+@attribute  attribute2 numeric
+@attribute  attribute3 numeric
+@attribute class {True, False}
+
+@data 
+
+a,3,5,False
+a,3,4,True
+b,3,4,True
+a,3,4,True
+b,3,4,False
+b,3,4,False
+a,3,4,False
+a,3,4,True
+c,3,4,True
+c,3,4,True
+c,3,5,False
+a,3,4,False
+b,3,4,False
+c,3,4,False
