@@ -153,7 +153,7 @@ public class KAnonymityFilter extends AbstractStreamFilter {
 			
 			instancesBuffer.add(instance);
 			alreadyAnonymizedInstances.add(false);
-		}		
+		}
 		
 		//check whether to begin processing the buffer
 		if (instancesBuffer.size() == bufferSizeOption.getValue()) {

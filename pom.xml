@@ -4,25 +4,29 @@
 	<groupId>nz.ac.waikato.cms.moa</groupId>
 	<artifactId>privacy-preserving-filters</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-
+	
+	<licenses>
+	    <license>
+	        <name>GNU General Public License 3.0</name>
+	        <url>http://www.gnu.org/licenses/gpl-3.0.txt</url>
+	    </license>
+	</licenses>
+	
 	<dependencies>
 		<dependency>
 			<groupId>nz.ac.waikato.cms.moa</groupId>
 			<artifactId>moa</artifactId>
 			<version>2013.11</version>
 		</dependency>
+		<dependency>
+		    <groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
-
+	
 	<build>
-		<sourceDirectory>src</sourceDirectory>
-		<resources>
-			<resource>
-				<directory>src</directory>
-				<excludes>
-					<exclude>**/*.java</exclude>
-				</excludes>
-			</resource>
-		</resources>
 		<plugins>
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
