@@ -8,6 +8,7 @@ import java.util.PriorityQueue;
 import java.util.Vector;
 
 import moa.core.InstancesHeader;
+import moa.core.Measurement;
 import moa.options.IntOption;
 import moa.streams.InstanceStream;
 import moa.streams.filters.AbstractStreamFilter;
@@ -20,7 +21,7 @@ import weka.core.Instance;
  * <br>
  * TODO comment how the algorithm works!!
  */
-public class KAnonymityFilter extends AbstractStreamFilter{
+public class KAnonymityFilter extends AbstractStreamFilter {
 	
 	/** Serial version identifier, to allow this class to be {@link Serializable}. */
 	private static final long serialVersionUID = 6339323265758039657L;
@@ -54,6 +55,10 @@ public class KAnonymityFilter extends AbstractStreamFilter{
     		new IntOption("bufferLength", 'b', "length of the historical buffer considered to " +
     				"begin the microaggregation process", 100);
     
+    /** Information Loss measure, calculated as the SSE (Sum of Squared Errors) of the anonymized
+     * instances with respect to the original values. */
+    public double informationLoss;
+    
     /**
      * Builds a new <em>k</em>-anonymity filter to anonymize data using a microaggregation scheme.
      * <br>
@@ -85,6 +90,7 @@ public class KAnonymityFilter extends AbstractStreamFilter{
     	this.startToProcess = false;
     	this.kAnonymityValueOption = kAnonymityValueOption;
     	this.bufferSizeOption = bufferSizeOption;
+    	this.informationLoss =  0.0;
 	}
 	
 	/**
@@ -283,11 +289,23 @@ public class KAnonymityFilter extends AbstractStreamFilter{
 				
 				//replace values of the instances with the aggregated one
 				for (int i = 0; i < clusterIndexes.size(); ++i) {
-					instancesBuffer.get(clusterIndexes.get(i)) //get instance
-								   .setValue(attributeIndex, newValue); //replace value
+					Instance instance =	instancesBuffer.get(clusterIndexes.get(i)); //get instance
+					
+					//calculate error
+					sumError(newValue, instance.value(attributeIndex));
+					
+					//replace value
+					instance.setValue(attributeIndex, newValue);
 				}
 			}
 		}
+	}
+	
+	//TODO comment
+	private void sumError(final double aggregatedValue, final double originalValue) {
+		double error = originalValue - aggregatedValue;
+		double squaredError = error * error;
+		informationLoss = informationLoss + squaredError;
 	}
 	
 	//TODO comment
