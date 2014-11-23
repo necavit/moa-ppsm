@@ -17,11 +17,6 @@ public class ExampleExecution {
 		//  consider the last attribute as the class (target) one
 		ArffFileStream stream = new ArffFileStream(path, -1);
 		
-		/* FIXME this should not be necessary, given the previous comment!
-		int nAttrs = stream.getHeader().numAttributes();
-		stream.classIndexOption.setValue(nAttrs - 1);
-		*/
-		
 		//FIXME delete this code if necessary
 		//stream.prepareForUse();
 		//int windowSize = Integer.parseInt(args[1]);
