@@ -8,7 +8,6 @@ import java.util.PriorityQueue;
 import java.util.Vector;
 
 import moa.core.InstancesHeader;
-import moa.core.Measurement;
 import moa.options.IntOption;
 import moa.streams.InstanceStream;
 import moa.streams.filters.AbstractStreamFilter;
@@ -18,8 +17,6 @@ import weka.core.Instance;
 /**
  * Privacy preserving filter that anonymizes data following a microaggregation scheme,
  * in order to achieve the <em>k</em>-anonymity property for anonymized data.
- * <br>
- * TODO comment how the algorithm works!!
  */
 public class KAnonymityFilter extends AbstractStreamFilter {
 	
@@ -57,7 +54,13 @@ public class KAnonymityFilter extends AbstractStreamFilter {
     
     /** Information Loss measure, calculated as the SSE (Sum of Squared Errors) of the anonymized
      * instances with respect to the original values. */
-    public double informationLoss;
+    public double currentSquaredError;
+    
+    /**
+     * Holds the value of the increment of the total squared error ({@link #currentSquaredError}) with
+     * respect to its last value.
+     */
+    public double incrementalSquaredError;
     
     /**
      * Builds a new <em>k</em>-anonymity filter to anonymize data using a microaggregation scheme.
@@ -90,7 +93,8 @@ public class KAnonymityFilter extends AbstractStreamFilter {
     	this.startToProcess = false;
     	this.kAnonymityValueOption = kAnonymityValueOption;
     	this.bufferSizeOption = bufferSizeOption;
-    	this.informationLoss =  0.0;
+    	this.currentSquaredError =  0.0;
+    	this.incrementalSquaredError = 0.0;
 	}
 	
 	/**
@@ -128,6 +132,8 @@ public class KAnonymityFilter extends AbstractStreamFilter {
 		this.instancesBuffer = new Vector<Instance>();
 		this.alreadyAnonymizedInstances =  new Vector<Boolean>();
 		this.startToProcess = false;
+		this.currentSquaredError = 0.0;
+		this.incrementalSquaredError = 0.0;
 	}
 	
 	@Override
@@ -137,7 +143,7 @@ public class KAnonymityFilter extends AbstractStreamFilter {
 
 	@Override
 	public void getDescription(StringBuilder arg0, int arg1) {
-		// TODO Auto-generated method stub
+		// Auto-generated method stub
 	}
 	
 	@Override
@@ -181,7 +187,9 @@ public class KAnonymityFilter extends AbstractStreamFilter {
 		
 		//anonymize the next instance only if it is not yet anonymized
 		if (!alreadyAnonymizedInstances.get(top)){
+			double previousError = currentSquaredError;
 			anonymizeNextInstance();
+			incrementalSquaredError = currentSquaredError - previousError;
 		}
 		
 		//remove the instance from the buffer and from the list of anonymized instances
@@ -212,14 +220,16 @@ public class KAnonymityFilter extends AbstractStreamFilter {
 	}
 	
 	/**
-	 * TODO comment this method!
-	 * @param targetInstance
-	 * @return
+	 * Builds a list of the indexes of instances corresponding to the K-Nearest Neighbors of the
+	 * given target instance.
+	 * 
+	 * @param targetInstance the instance around which the clustering is performed
+	 * @return the list of indexes of the cluster
 	 */
 	private List<Integer> getKNearestNeighborsForTopInstance(final Instance targetInstance) {
 		//initialize heap of nearest neighbors, ordered by distance
 		PriorityQueue<DistanceIndexPair> kNearestNeighbors = 
-				new PriorityQueue<DistanceIndexPair>(kAnonymityValueOption.getValue() - 1);
+				new PriorityQueue<DistanceIndexPair>(Math.max(1, kAnonymityValueOption.getValue() - 1));
 		
 		//iterate over all the instances in the actual buffer
 		//  (except the top one, thus beginning from i = 1)
@@ -235,13 +245,16 @@ public class KAnonymityFilter extends AbstractStreamFilter {
 					kNearestNeighbors.add(new DistanceIndexPair(distanceToTarget, i));
 				}
 				else {
-					//check if is nearer than the current farthest one
-					double currentMaxDistance = kNearestNeighbors.peek().distance;
-					if (distanceToTarget < currentMaxDistance) {
-						//an instance has been found that is nearer than the current maximum
-						//  -> remove the maximum and set the new one
-						kNearestNeighbors.poll();
-						kNearestNeighbors.add(new DistanceIndexPair(distanceToTarget, i));
+					DistanceIndexPair maxPair = kNearestNeighbors.peek();
+					if (maxPair != null) {
+						//check if is nearer than the current farthest one
+						double currentMaxDistance = maxPair.distance;
+						if (distanceToTarget < currentMaxDistance) {
+							//an instance has been found that is nearer than the current maximum
+							//  -> remove the maximum and set the new one
+							kNearestNeighbors.poll();
+							kNearestNeighbors.add(new DistanceIndexPair(distanceToTarget, i));
+						}
 					}
 				}
 			}
@@ -260,7 +273,18 @@ public class KAnonymityFilter extends AbstractStreamFilter {
 		return indexesOfNearestNeighbors;
 	}
 	
-	//TODO comment method
+	/**
+	 * Performs an anonimization process to all instances of the given index list (a cluster):
+	 * <ol>
+	 *   <li>Sets to {@code true} the corresponding entries of the {@link #alreadyAnonymizedInstances} buffer</li>
+	 *   <li>For each attribute, computes an aggregated value, considering all values from the instances of 
+	 *   the cluster.</li>
+	 *   <li>Imputes the aggregated value to all instances of the cluster.</li>
+	 *   <li>Sums the squared error to the global error counter.</li>
+	 * </ol> 
+	 * 
+	 * @param clusterIndexes the indexes of the instances of the cluster
+	 */
 	private void anonymizeClusterWithIndexes(List<Integer> clusterIndexes) {
 		//flag as anonymized the instances of the cluster
 		for (Integer index : clusterIndexes) {
@@ -301,14 +325,26 @@ public class KAnonymityFilter extends AbstractStreamFilter {
 		}
 	}
 	
-	//TODO comment
+	/**
+	 * Adds the squared error for the given values to the global error counter ({@link #currentSquaredError})
+	 * 
+	 * @param aggregatedValue the distorted value
+	 * @param originalValue the original value
+	 */
 	private void sumError(final double aggregatedValue, final double originalValue) {
 		double error = originalValue - aggregatedValue;
 		double squaredError = error * error;
-		informationLoss = informationLoss + squaredError;
+		currentSquaredError = currentSquaredError + squaredError;
 	}
 	
-	//TODO comment
+	/**
+	 * Performs an aggregation of values of the target attribute, considering all instances contained in
+	 * the given set of indexes.
+	 * 
+	 * @param attributeIndex the index of the attribute on which to perform the aggregation
+	 * @param clusterIndexes a list of indexes of the instances in the buffer to take into account
+	 * @return the aggregated value (computed as the average)
+	 */
 	private double aggregateNumericalAttributeForInstances(final int attributeIndex, final List<Integer> clusterIndexes) {
 		double average = 0.0;
 		for (int i = 0; i < clusterIndexes.size(); ++i){
@@ -319,7 +355,14 @@ public class KAnonymityFilter extends AbstractStreamFilter {
 		return average;
 	}
 	
-	//TODO comment
+	/**
+	 * Performs an aggregation of values of the target attribute, considering all instances contained in
+	 * the given set of indexes.
+	 * 
+	 * @param attributeIndex the index of the attribute on which to perform the aggregation
+	 * @param clusterIndexes a list of indexes of the instances in the buffer to take into account
+	 * @return the aggregated value (computed as the mode)
+	 */
 	private double aggregateNominalAttributeForInstances(final int attributeIndex, final List<Integer> clusterIndexes) {
 		//map of possible (nominal) values of the attribute with their number of appearances:
 		Map<Double, Integer> valueCounter = new HashMap<Double, Integer>();
@@ -386,7 +429,14 @@ public class KAnonymityFilter extends AbstractStreamFilter {
 		return Math.sqrt(dist);
 	}
 	
-	//TODO comment class
+	/**
+	 * Pair used to implement the heap (priority queue) needed to perform the K-Nearest Neighbors
+	 * clustering of the KAnonymity filter.
+	 * <p>
+	 * Besides storing the required values in some more "semantic" and inmutable variables,
+	 * this class implements the {@link Comparable} interface, thus enabling proper sorting
+	 * properties of objects of this class.
+	 */
 	private final class DistanceIndexPair implements Comparable<DistanceIndexPair> {
 		
 		/** The distance of the instance. */
@@ -408,7 +458,6 @@ public class KAnonymityFilter extends AbstractStreamFilter {
 			this.index = index;
 		}
 		
-		//TODO comment why to override this
 		@Override
 		public int compareTo(DistanceIndexPair element) {
 			return this.distance.compareTo(element.distance);

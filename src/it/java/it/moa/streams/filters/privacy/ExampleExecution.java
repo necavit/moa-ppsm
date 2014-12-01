@@ -36,7 +36,8 @@ public class ExampleExecution {
 		while (filter.hasMoreInstances()) {
 			Instance instance = filter.nextInstance();
 			if (instance != null) {
-				System.out.println("instance: " + instance.toString());
+				System.out.print("instance={" + instance.toString() + "}");
+				System.out.println("error=" + filter.currentSquaredError);
 			}
 			else {
 				System.out.println("nextInstance() returned null instance: the anonymization buffer is still filling up...");
