@@ -1,4 +1,4 @@
-package moa.streams.filters.privacy;
+package moa.streams.filters.privacy.rankswapping;
 
 
 public class IndexValuePair implements Comparable<IndexValuePair> {

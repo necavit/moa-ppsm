@@ -6,7 +6,6 @@ import weka.core.Instance;
 import moa.core.InstancesHeader;
 import moa.options.IntOption;
 import moa.streams.filters.AbstractStreamFilter;
-import moa.streams.filters.privacy.IndexValuePair;
 
 import java.util.Vector;
 

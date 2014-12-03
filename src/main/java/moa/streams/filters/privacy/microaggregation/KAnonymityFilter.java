@@ -70,7 +70,7 @@ public class KAnonymityFilter extends AbstractStreamFilter {
 	 * remains uninitialized. Please make sure that you call {@link #setInputStream(InstanceStream)} on 
 	 * this filter instance after its creation.
      */
-	public KAnonymityFilter(){
+	public KAnonymityFilter() {
     	this(DEFAULT_K_ANONYMITY_OPTION, DEFAULT_BUFFER_SIZE_OPTION);
     }
 	
