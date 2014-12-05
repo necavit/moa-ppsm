@@ -2,6 +2,10 @@ package moa.streams.filters.privacy.utils;
 
 import weka.core.Instance;
 
+/**
+ * Utility class, with static methods that can be used to compute metrics between instances, like
+ * the {@link #distance(Instance, Instance)} measure.
+ */
 public class Metrics {
 
 	/**

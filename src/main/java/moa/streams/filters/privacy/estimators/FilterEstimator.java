@@ -1,5 +1,8 @@
 package moa.streams.filters.privacy.estimators;
 
+/**
+ * Generic privacy filter estimator.
+ */
 public interface FilterEstimator {
 
 	/**

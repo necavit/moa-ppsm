@@ -14,7 +14,7 @@ public abstract class AnonymizationAlgorithm {
 	 * 
 	 * @return the {@link #inputStream} that is attached to the algorithm.
 	 */
-	public InstanceStream getInputStream() {
+	public final InstanceStream getInputStream() {
 		return inputStream;
 	}
 	
@@ -27,7 +27,7 @@ public abstract class AnonymizationAlgorithm {
 	 * 
 	 * @param inputStream the {@link InstanceStream} to be attached
 	 */
-	public void setInputStream(InstanceStream inputStream) {
+	public final void setInputStream(InstanceStream inputStream) {
 		this.inputStream = inputStream;
 	}
 	
