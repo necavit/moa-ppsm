@@ -8,7 +8,7 @@
 	</classpathentry>
 	<classpathentry kind="src" path="src/it/resources"/>
 	<classpathentry kind="src" path="src/it/java"/>
-	<classpathentry kind="src" path="src/test/resources"/>
+	<classpathentry including="**/*.java" kind="src" path="src/test/resources"/>
 	<classpathentry kind="src" output="target/test-classes" path="src/test/java">
 		<attributes>
 			<attribute name="optional" value="true"/>
