@@ -1,7 +1,7 @@
-package it.moa.streams.filters.privacy;
+package moa.streams.filters.privacy;
 
-import it.moa.streams.filters.privacy.PrivacyFilterExecutor.FilteredInstanceExecutor;
 import moa.streams.filters.AbstractStreamFilter;
+import moa.streams.filters.privacy.PrivacyFilterExecutor.FilteredInstanceExecutor;
 import moa.streams.filters.privacy.microaggregation.KAnonymityFilter;
 import moa.streams.generators.RandomRBFGenerator;
 import weka.core.Instance;

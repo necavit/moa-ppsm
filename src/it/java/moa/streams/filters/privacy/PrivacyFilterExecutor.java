@@ -1,4 +1,4 @@
-package it.moa.streams.filters.privacy;
+package moa.streams.filters.privacy;
 
 import moa.core.InstancesHeader;
 import moa.streams.InstanceStream;

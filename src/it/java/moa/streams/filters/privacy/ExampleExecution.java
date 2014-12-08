@@ -1,4 +1,4 @@
-package it.moa.streams.filters.privacy;
+package moa.streams.filters.privacy;
 
 import moa.classifiers.Classifier;
 import moa.classifiers.drift.SingleClassifierDrift;
