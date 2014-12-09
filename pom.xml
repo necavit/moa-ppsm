@@ -4,14 +4,20 @@
 	<groupId>nz.ac.waikato.cms.moa</groupId>
 	<artifactId>privacy-preserving-filters</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	
+
+	<developers>
+		<developer>
+			<name>David Martínez</name>
+		</developer>
+	</developers>
+
 	<licenses>
-	    <license>
-	        <name>GNU General Public License 3.0</name>
-	        <url>http://www.gnu.org/licenses/gpl-3.0.txt</url>
-	    </license>
+		<license>
+			<name>GNU General Public License 3.0</name>
+			<url>http://www.gnu.org/licenses/gpl-3.0.txt</url>
+		</license>
 	</licenses>
-	
+
 	<dependencies>
 		<dependency>
 			<groupId>nz.ac.waikato.cms.moa</groupId>
@@ -19,23 +25,55 @@
 			<version>2013.11</version>
 		</dependency>
 		<dependency>
-		    <groupId>junit</groupId>
+			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.11</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
-	
+
 	<build>
-		<plugins>
-			<plugin>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.1</version>
-				<configuration>
-					<source>1.7</source>
-					<target>1.7</target>
-				</configuration>
-			</plugin>
-		</plugins>
+	<plugins>
+		<plugin>
+			<groupId>org.codehaus.mojo</groupId>
+			<artifactId>build-helper-maven-plugin</artifactId>
+			<version>1.5</version>
+			<executions>
+				<execution>
+					<id>add-test-source</id>
+					<phase>process-resources</phase>
+					<goals>
+						<goal>add-test-source</goal>
+					</goals>
+					<configuration>
+						<sources>
+							<source>src/it/java</source>
+						</sources>
+					</configuration>
+				</execution>
+			</executions>
+		</plugin>
+		<plugin>
+			<artifactId>maven-compiler-plugin</artifactId>
+			<version>3.1</version>
+			<configuration>
+				<source>1.7</source>
+				<target>1.7</target>
+			</configuration>
+		</plugin>
+		<plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-failsafe-plugin</artifactId>
+			<version>2.18</version>
+			<executions>
+				<execution>
+					<goals>
+						<goal>integration-test</goal>
+						<goal>verify</goal>
+					</goals>
+				</execution>
+			</executions>
+		</plugin>
+	</plugins>
 	</build>
 </project>

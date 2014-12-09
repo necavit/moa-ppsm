@@ -6,7 +6,7 @@ import moa.streams.filters.privacy.microaggregation.KAnonymityFilter;
 import moa.streams.generators.RandomRBFGenerator;
 import weka.core.Instance;
 
-public class InformationLossTest {
+public class InformationLossExample {
 
 	public static void main(String [] args) {
 		KAnonymityFilter kaFilter = new KAnonymityFilter();

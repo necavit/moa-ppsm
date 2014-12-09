@@ -5,7 +5,7 @@ import moa.streams.filters.privacy.microaggregation.MicroAggregationFilter;
 import moa.streams.generators.RandomRBFGenerator;
 
 
-public class FooTest {
+public class RBFMicroExample {
 
 	public static void main(String [] args) {
 		
