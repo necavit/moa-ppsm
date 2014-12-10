@@ -89,7 +89,7 @@ public class BufferedIndividualRecordLinker implements DisclosureRiskEstimator {
 		addInstanceToBuffer(instancePair.originalInstance);
 		
 		//get nearest instances (indexes) to the anonymized one
-		int guess = guessNearestInstance(instancePair.originalInstance);
+		int guess = guessNearestInstance(instancePair.anonymizedInstance);
 		
 		//check if the nearest guesses contain the target one
 		if (guess == (originalInstancesBuffer.size() - 1)) {
