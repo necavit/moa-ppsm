@@ -9,7 +9,14 @@ public class NoiseAdditionFilter extends PrivacyFilter {
 
 	public NoiseAdditionFilter(InstanceStream inputStream) {
 		super(inputStream,
-				new GaussianNoiseAdder());
+				new GaussianDistorter());
+	}
+	
+	public NoiseAdditionFilter(InstanceStream inputStream, 
+			double classNoiseFraction, double attributeNoiseFraction) {
+		super(inputStream,
+				new GaussianDistorter(classNoiseFraction, 
+									  attributeNoiseFraction));
 	}
 
 	@Override

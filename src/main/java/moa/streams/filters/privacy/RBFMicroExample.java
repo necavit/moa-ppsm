@@ -2,6 +2,7 @@ package moa.streams.filters.privacy;
 
 import weka.core.Instance;
 import moa.streams.filters.privacy.microaggregation.MicroAggregationFilter;
+import moa.streams.filters.privacy.noiseaddition.NoiseAdditionFilter;
 import moa.streams.generators.RandomRBFGenerator;
 
 
@@ -12,7 +13,8 @@ public class RBFMicroExample {
 		RandomRBFGenerator stream = new RandomRBFGenerator();
 		stream.prepareForUse();
 		
-		MicroAggregationFilter filter = new MicroAggregationFilter(stream);
+		//MicroAggregationFilter filter = new MicroAggregationFilter(stream);
+		NoiseAdditionFilter filter = new NoiseAdditionFilter(stream, 0.25, 1.0);
 		
 		int instanceCounter = 0;
 		int n = 1000;
