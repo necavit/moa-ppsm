@@ -13,7 +13,7 @@ public class RBFMicroExample {
 		RandomRBFGenerator stream = new RandomRBFGenerator();
 		stream.prepareForUse();
 		
-		//MicroAggregationFilter filter = new MicroAggregationFilter(stream);
+		//MicroAggregationFilter mfilter = new MicroAggregationFilter(stream);
 		NoiseAdditionFilter filter = new NoiseAdditionFilter(stream, 0.1, 0.5);
 		BufferedIndividualRecordLinker recordLinker = 
 				(BufferedIndividualRecordLinker) filter.getDisclosureRiskEstimator();
