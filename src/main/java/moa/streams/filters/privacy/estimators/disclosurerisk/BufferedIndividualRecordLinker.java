@@ -12,7 +12,7 @@ public class BufferedIndividualRecordLinker implements DisclosureRiskEstimator {
 	private Vector<Instance> originalInstancesBuffer;
 	
 	/** The size of the re-identification buffer */
-	private final int bufferSize;
+	private int bufferSize;
 		
 	/** The number of re-identification hits */
 	private int recordLinkageHits;
@@ -44,6 +44,31 @@ public class BufferedIndividualRecordLinker implements DisclosureRiskEstimator {
 	 */
 	public int getBufferSize() {
 		return bufferSize;
+	}
+	
+	/**
+	 * Configures this estimator to allocate a re-identification buffer of the 
+	 * given size. <b>Please remember</b> to call {@link #restart()} some way or
+	 * another in order to prepare the estimator for next use.
+	 * 
+	 * @param bufferSize the size of the re-identification buffer
+	 */
+	public void setBufferSize(int bufferSize) {
+		this.bufferSize = bufferSize;
+	}
+	
+	/**
+	 * @return the number of instances processed
+	 */
+	public int getProcessedInstances() {
+		return processedInstances;
+	}
+	
+	/**
+	 * @return the number of re-identification hits
+	 */
+	public int getRecordLinkageHits() {
+		return recordLinkageHits;
 	}
 	
 	@Override

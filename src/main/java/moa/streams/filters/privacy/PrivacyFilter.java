@@ -23,10 +23,10 @@ public abstract class PrivacyFilter extends AbstractStreamFilter {
 	private final AnonymizationAlgorithm anonymizationAlgorithm;
 	
 	/** The estimator of the information loss due to the anonymization */
-	private final InformationLossEstimator informationLossEstimator;
+	private InformationLossEstimator informationLossEstimator;
 	
 	/** The estimator of the disclosure risk of the ouput stream of instances */
-	private final DisclosureRiskEstimator disclosureRiskEstimator;
+	private DisclosureRiskEstimator disclosureRiskEstimator;
 	
 	/**
 	 * Builds a privacy filter with the given algorithms and estimators.
@@ -107,6 +107,26 @@ public abstract class PrivacyFilter extends AbstractStreamFilter {
 	}
 	
 	/**
+	 * Retrieves the {@link DisclosureRiskEstimator} used in this filter. This
+	 * method can be useful if the estimator can be customized.
+	 * 
+	 * @return the diclosure risk estimator being used in this filter
+	 */
+	public DisclosureRiskEstimator getDisclosureRiskEstimator() {
+		return disclosureRiskEstimator;
+	}
+	
+	/**
+	 * Retrieves the {@link InformationLossEstimator} used in this filter. This
+	 * method can be useful if the estimator can be customized.
+	 * 
+	 * @return the information loss estimator being used in this filter
+	 */
+	public InformationLossEstimator getInformationLossEstimator() {
+		return informationLossEstimator;
+	}
+	
+	/**
 	 * Retrieves the current information loss estimation, as given by the {@link #informationLossEstimator}.
 	 * 
 	 * @return the current total information loss estimation
@@ -132,6 +152,30 @@ public abstract class PrivacyFilter extends AbstractStreamFilter {
 	 */
 	public double getCurrentDisclosureRisk() {
 		return disclosureRiskEstimator.getCurrentDisclosureRisk();
+	}
+	
+	/**
+	 * Configures this privacy filter to use the given {@link DisclosureRiskEstimator}.
+	 * <p>
+	 * <b>WARNING!</b> If you are configuring the filter after began processing instances,
+	 * please call {@link #restartImpl()} in order to reset all needed resources and methods.
+	 * 
+	 * @param disclosureRiskEstimator the estimator to be used
+	 */
+	public void setDisclosureRiskEstimator(DisclosureRiskEstimator disclosureRiskEstimator) {
+		this.disclosureRiskEstimator = disclosureRiskEstimator;
+	}
+	
+	/**
+	 * Configures this privacy filter to use the given {@link InformationLossEstimator}.
+	 * <p>
+	 * <b>WARNING!</b> If you are configuring the filter after began processing instances,
+	 * please call {@link #restartImpl()} in order to reset all needed resources and methods.
+	 * 
+	 * @param informationLossEstimator the estimator to be used
+	 */
+	public void setInformationLossEstimator(InformationLossEstimator informationLossEstimator) {
+		this.informationLossEstimator = informationLossEstimator;
 	}
 	
 }
