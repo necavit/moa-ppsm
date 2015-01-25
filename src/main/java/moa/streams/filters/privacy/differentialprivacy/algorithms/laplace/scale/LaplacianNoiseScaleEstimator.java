@@ -1,4 +1,4 @@
-package moa.streams.filters.privacy.differentialprivacy.algorithms.laplace;
+package moa.streams.filters.privacy.differentialprivacy.algorithms.laplace.scale;
 
 public abstract class LaplacianNoiseScaleEstimator {
 

@@ -3,6 +3,9 @@ package moa.streams.filters.privacy.differentialprivacy.algorithms.laplace;
 import moa.core.AutoExpandVector;
 import moa.streams.filters.privacy.AnonymizationAlgorithm;
 import moa.streams.filters.privacy.InstancePair;
+import moa.streams.filters.privacy.differentialprivacy.algorithms.laplace.scale.LaplacianNoiseScaleEstimator;
+import moa.streams.filters.privacy.differentialprivacy.algorithms.laplace.scale.DomainRangeScaleEstimator;
+import moa.streams.filters.privacy.differentialprivacy.algorithms.laplace.scale.VarianceScaleEstimator;
 import weka.core.Instance;
 
 public class LaplaceMechanism extends AnonymizationAlgorithm {
@@ -68,7 +71,9 @@ public class LaplaceMechanism extends AnonymizationAlgorithm {
 				}
 				else { //numerical attribute
 					if (scaleEstimator == null) {
-						scaleEstimator = new NumericalAttributeScaleEstimator(epsilon);
+						scaleEstimator = 
+							// TODO new VarianceScaleEstimator(epsilon);
+							new DomainRangeScaleEstimator(epsilon);
 						attributeScaleEstimators.set(i, scaleEstimator);
 					}
 					double value = anonymizedInstance.value(i);

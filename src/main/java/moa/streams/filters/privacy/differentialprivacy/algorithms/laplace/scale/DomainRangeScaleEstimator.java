@@ -1,6 +1,6 @@
-package moa.streams.filters.privacy.differentialprivacy.algorithms.laplace;
+package moa.streams.filters.privacy.differentialprivacy.algorithms.laplace.scale;
 
-public class NumericalAttributeScaleEstimator extends LaplacianNoiseScaleEstimator {
+public class DomainRangeScaleEstimator extends LaplacianNoiseScaleEstimator {
 
 	private double minimum;
 	
@@ -8,7 +8,7 @@ public class NumericalAttributeScaleEstimator extends LaplacianNoiseScaleEstimat
 	
 	private boolean initialized;
 	
-	public NumericalAttributeScaleEstimator(double epsilon) {
+	public DomainRangeScaleEstimator(double epsilon) {
 		super(epsilon);
 		initialized = false;
 	}
@@ -29,7 +29,7 @@ public class NumericalAttributeScaleEstimator extends LaplacianNoiseScaleEstimat
 			}
 		}
 		
-		return maximum - minimum;
+		return (maximum - minimum) / epsilon;
 	}
 
 }
