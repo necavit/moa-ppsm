@@ -1,5 +1,6 @@
 package moa.streams.filters.privacy;
 
+import moa.streams.filters.privacy.differentialprivacy.DifferentialPrivacyFilter;
 import moa.streams.filters.privacy.estimators.disclosurerisk.BufferedIndividualRecordLinker;
 import moa.streams.filters.privacy.noiseaddition.NoiseAdditionFilter;
 import moa.streams.filters.privacy.rankswapping.RankSwappingFilter;
@@ -18,8 +19,8 @@ public class RBFMicroExample {
 		
 		//MicroAggregationFilter filter = new MicroAggregationFilter(stream);
 		//NoiseAdditionFilter filter = new NoiseAdditionFilter(stream, 0.1, 0.5);
-		RankSwappingFilter filter = 
-				new RankSwappingFilter(stream, 3141592, 100, 50);
+		//RankSwappingFilter filter = new RankSwappingFilter(stream, 3141592, 100, 50);
+		DifferentialPrivacyFilter filter = new DifferentialPrivacyFilter(stream);
 		/*
 		BufferedIndividualRecordLinker recordLinker = 
 				(BufferedIndividualRecordLinker) filter.getDisclosureRiskEstimator();
