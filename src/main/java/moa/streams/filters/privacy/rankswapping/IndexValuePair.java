@@ -15,7 +15,7 @@ public class IndexValuePair implements Comparable<IndexValuePair> {
 	 * </ul>
 	 */
 	public IndexValuePair() {
-		new IndexValuePair(0,0.0);
+		this(0,0.0);
 	}
 	
 	/**
@@ -28,18 +28,6 @@ public class IndexValuePair implements Comparable<IndexValuePair> {
 		this.index = index;
 		this.value = value;
 	}
-	
-	/* TODO decide if this is important
-	public boolean equals(Object o){
-		if (o instanceof Pair)
-			return true;
-		else return false;
-	}
-	
-	public String toString(){
-		String st = "index: ";
-		return st+index+" value: "+value;
-	}*/
 
 	@Override
 	public int compareTo(IndexValuePair b) {
