@@ -14,9 +14,12 @@ public class RBFMicroExample {
 		RandomRBFGenerator stream = new RandomRBFGenerator();
 		stream.prepareForUse();
 		
+		System.out.println(stream.getHeader().toSummaryString());
+		
 		//MicroAggregationFilter filter = new MicroAggregationFilter(stream);
 		//NoiseAdditionFilter filter = new NoiseAdditionFilter(stream, 0.1, 0.5);
-		RankSwappingFilter filter = new RankSwappingFilter(stream);
+		RankSwappingFilter filter = 
+				new RankSwappingFilter(stream, 3141592, 100, 50);
 		/*
 		BufferedIndividualRecordLinker recordLinker = 
 				(BufferedIndividualRecordLinker) filter.getDisclosureRiskEstimator();
@@ -25,7 +28,7 @@ public class RBFMicroExample {
 		*/
 		
 		int instanceCounter = 0;
-		int n = 100;
+		int n = 1000;
 		while (filter.hasMoreInstances() && instanceCounter < n) {
 			Instance instance = filter.nextInstance();
 			if (instance != null) {
