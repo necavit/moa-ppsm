@@ -29,7 +29,7 @@ public class RankSwapper extends AnonymizationAlgorithm {
 	private int pParameter;
 	
 	public RankSwapper() {
-		this(3141592, 100, 10);
+		this(3141592, 100, 20);
 	}
 	
 	public RankSwapper(long randomSeed, int bufferSize, int pParameter) {
@@ -134,7 +134,7 @@ public class RankSwapper extends AnonymizationAlgorithm {
 		int indexToStart = 0;
 		boolean found = false;
 		for (int i = 0; i < list.size() && !found; ++i) {
-			if (list.get(i).value == 0){
+			if (list.get(i).index == 0){
 				indexToStart = i;
 				found = true;
 			}
