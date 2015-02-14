@@ -1,18 +1,13 @@
 package moa.streams.filters.privacy.differentialprivacy.algorithms.laplace;
 
 import moa.core.AutoExpandVector;
-import moa.streams.filters.privacy.AnonymizationAlgorithm;
-import moa.streams.filters.privacy.InstancePair;
-import moa.streams.filters.privacy.differentialprivacy.algorithms.laplace.scale.LaplacianNoiseScaleEstimator;
 import moa.streams.filters.privacy.differentialprivacy.algorithms.laplace.scale.DomainRangeScaleEstimator;
-import moa.streams.filters.privacy.differentialprivacy.algorithms.laplace.scale.VarianceScaleEstimator;
+import moa.streams.filters.privacy.differentialprivacy.algorithms.laplace.scale.LaplacianNoiseScaleEstimator;
 import weka.core.Instance;
 
-public class LaplaceMechanism extends AnonymizationAlgorithm {
-
-	//TODO add more members, possibly
+public class LaplaceMechanism {
+	
 	public static final long DEFAULT_RANDOM_SEED_VALUE = 1235711;
-	private long randomSeed;
 	private LaplacianNoiseGenerator laplacianNoiseGenerator;
 	
 	public static final double DEFAULT_EPSILON_VALUE = 0.1;
@@ -20,7 +15,7 @@ public class LaplaceMechanism extends AnonymizationAlgorithm {
 	private AutoExpandVector<LaplacianNoiseScaleEstimator> attributeScaleEstimators;
 	
 	public LaplaceMechanism() {
-		this(DEFAULT_EPSILON_VALUE);
+		this(DEFAULT_RANDOM_SEED_VALUE, DEFAULT_EPSILON_VALUE);
 	}
 	
 	public LaplaceMechanism(double epsilon) {
@@ -28,36 +23,12 @@ public class LaplaceMechanism extends AnonymizationAlgorithm {
 	}
 	
 	public LaplaceMechanism(long randomSeed, double epsilon) {
-		this.randomSeed = randomSeed;
 		this.epsilon = epsilon;
 		this.laplacianNoiseGenerator = new LaplacianNoiseGenerator(randomSeed);
 		this.attributeScaleEstimators = new AutoExpandVector<LaplacianNoiseScaleEstimator>();
 	}
-
-	@Override
-	public void restart() {
-		this.laplacianNoiseGenerator = new LaplacianNoiseGenerator(randomSeed);
-		this.attributeScaleEstimators = new AutoExpandVector<LaplacianNoiseScaleEstimator>();
-	}
 	
-	public double getEpsilon() {
-		return epsilon;
-	}
-	
-	public void setEpsilon(double epsilon) {
-		this.epsilon = epsilon;
-	}
-
-	@Override
-	public InstancePair nextAnonymizedInstancePair() {
-		Instance originalInstance = (Instance) inputStream.nextInstance().copy();
-		Instance anonymizedInstance = addLaplaceNoise(originalInstance);
-		
-		InstancePair instancePair = new InstancePair(originalInstance, anonymizedInstance);
-		return instancePair;
-	}
-
-	private Instance addLaplaceNoise(final Instance originalInstance) {
+	public Instance addLaplaceNoise(final Instance originalInstance) {
 		//copy the instance
 		Instance anonymizedInstance = (Instance) originalInstance.copy();
 		
@@ -72,7 +43,6 @@ public class LaplaceMechanism extends AnonymizationAlgorithm {
 				else { //numerical attribute
 					if (scaleEstimator == null) {
 						scaleEstimator = 
-							// TODO new VarianceScaleEstimator(epsilon);
 							new DomainRangeScaleEstimator(epsilon);
 						attributeScaleEstimators.set(i, scaleEstimator);
 					}
@@ -86,10 +56,6 @@ public class LaplaceMechanism extends AnonymizationAlgorithm {
         }
 		return anonymizedInstance;
 	}
-
-	@Override
-	public boolean hasMoreInstances() {
-		return inputStream.hasMoreInstances();
-	}
-
+	
+	
 }

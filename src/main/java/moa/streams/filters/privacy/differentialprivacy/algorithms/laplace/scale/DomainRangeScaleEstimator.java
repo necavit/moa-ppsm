@@ -3,9 +3,7 @@ package moa.streams.filters.privacy.differentialprivacy.algorithms.laplace.scale
 public class DomainRangeScaleEstimator extends LaplacianNoiseScaleEstimator {
 
 	private double minimum;
-	
 	private double maximum;
-	
 	private boolean initialized;
 	
 	public DomainRangeScaleEstimator(double epsilon) {
@@ -28,8 +26,8 @@ public class DomainRangeScaleEstimator extends LaplacianNoiseScaleEstimator {
 				minimum = value;
 			}
 		}
-		
-		return (maximum - minimum) / epsilon;
+		double range = maximum - minimum;
+		return (1.5 * range) / epsilon;
 	}
 
 }
