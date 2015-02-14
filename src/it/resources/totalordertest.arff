@@ -1,0 +1,23 @@
+@relation totalordertest
+
+@attribute  attribute1 numeric
+@attribute  attribute2 numeric
+@attribute  attribute3 numeric
+@attribute class {True, False}
+
+@data 
+
+1,5,5,False
+2,4,4,True
+3,3,3,True
+4,2,4,True
+5,1,4,False
+1,5,3,False
+2,4,4,False
+3,3,4,True
+4,2,4,True
+5,1,2,True
+1,4,5,False
+2,3,4,False
+3,2,1,False
+4,1,4,False
