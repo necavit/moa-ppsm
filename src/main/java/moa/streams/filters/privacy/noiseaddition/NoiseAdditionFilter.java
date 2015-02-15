@@ -28,6 +28,10 @@ public class NoiseAdditionFilter extends PrivacyFilter {
 				new NoiseAdder());
 	}
 	
+	public NoiseAdditionFilter() {
+		super(null, new NoiseAdder());
+	}
+	
 	/**
 	 * Builds a {@link NoiseAdditionFilter} with the given input stream and a
 	 * {@link NoiseAdder} as the anonymization algorithm, which parameters

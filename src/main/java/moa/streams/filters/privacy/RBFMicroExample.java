@@ -1,6 +1,5 @@
 package moa.streams.filters.privacy;
 
-import moa.streams.filters.privacy.differentialprivacy.DifferentialPrivacyFilter;
 import moa.streams.filters.privacy.differentialprivacy.MADPFilter;
 import moa.streams.generators.RandomRBFGenerator;
 import weka.core.Instance;
