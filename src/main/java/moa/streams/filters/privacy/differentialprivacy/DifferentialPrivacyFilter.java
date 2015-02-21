@@ -4,7 +4,9 @@ import moa.streams.InstanceStream;
 import moa.streams.filters.privacy.PrivacyFilter;
 import moa.streams.filters.privacy.differentialprivacy.algorithms.laplace.LaplaceNoiseAdder;
 
-public class DifferentialPrivacyFilter extends PrivacyFilter {
+public class DifferentialPrivacyFilter {
+	
+} /*FIXME extends PrivacyFilter {
 	
 	private static final long serialVersionUID = 2884176064303386530L;
 	
@@ -19,3 +21,4 @@ public class DifferentialPrivacyFilter extends PrivacyFilter {
 	}
 
 }
+*/

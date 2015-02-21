@@ -3,7 +3,9 @@ package moa.streams.filters.privacy.differentialprivacy.microaggregation;
 import moa.streams.InstanceStream;
 import moa.streams.filters.privacy.PrivacyFilter;
 
-public class TotalOrderMicroaggregationFilter extends PrivacyFilter {
+public class TotalOrderMicroaggregationFilter {
+	
+} /*FIXME extends PrivacyFilter {
 
 	private static final long serialVersionUID = 3916696070219573032L;
 
@@ -18,3 +20,4 @@ public class TotalOrderMicroaggregationFilter extends PrivacyFilter {
 	}
 
 }
+*/

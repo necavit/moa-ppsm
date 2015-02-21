@@ -3,7 +3,9 @@ package moa.streams.filters.privacy.differentialprivacy;
 import moa.streams.InstanceStream;
 import moa.streams.filters.privacy.PrivacyFilter;
 
-public class MADPFilter extends PrivacyFilter {
+public class MADPFilter {
+	
+} /*FIXME extends PrivacyFilter {
 
 	private static final long serialVersionUID = 7341024060515650696L;
 
@@ -19,3 +21,4 @@ public class MADPFilter extends PrivacyFilter {
 	}
 
 }
+*/

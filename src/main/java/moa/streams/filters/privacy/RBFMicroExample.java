@@ -1,6 +1,6 @@
 package moa.streams.filters.privacy;
 
-import moa.streams.filters.privacy.differentialprivacy.MADPFilter;
+import moa.streams.filters.privacy.noiseaddition.NoiseAdditionFilter;
 import moa.streams.generators.RandomRBFGenerator;
 import weka.core.Instance;
 
@@ -15,10 +15,11 @@ public class RBFMicroExample {
 		System.out.println(stream.getHeader().toSummaryString());
 		
 		//MicroAggregationFilter filter = new MicroAggregationFilter(stream);
-		//NoiseAdditionFilter filter = new NoiseAdditionFilter(stream, 0.1, 0.5);
+		NoiseAdditionFilter filter = new NoiseAdditionFilter(0.1, 0.5);
+		filter.setInputStream(stream);
 		//RankSwappingFilter filter = new RankSwappingFilter(stream, 3141592, 100, 50);
 		//DifferentialPrivacyFilter filter = new DifferentialPrivacyFilter(stream, 321868435, 0.1);
-		MADPFilter filter = new MADPFilter(stream, 100, 100, 0.1);
+		//MADPFilter filter = new MADPFilter(stream, 100, 100, 0.1);
 		/*
 		BufferedIndividualRecordLinker recordLinker = 
 				(BufferedIndividualRecordLinker) filter.getDisclosureRiskEstimator();

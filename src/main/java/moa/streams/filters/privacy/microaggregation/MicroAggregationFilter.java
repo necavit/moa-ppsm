@@ -4,7 +4,9 @@ import moa.streams.InstanceStream;
 import moa.streams.filters.privacy.PrivacyFilter;
 import moa.streams.filters.privacy.microaggregation.algorithms.knn.KNNMicroAggregation;
 
-public class MicroAggregationFilter extends PrivacyFilter {
+public class MicroAggregationFilter {
+	
+} /*FIXME extends PrivacyFilter {
 
 	private static final long serialVersionUID = -1743973571383456371L;
 
@@ -19,3 +21,4 @@ public class MicroAggregationFilter extends PrivacyFilter {
 	}
 	
 }
+*/
