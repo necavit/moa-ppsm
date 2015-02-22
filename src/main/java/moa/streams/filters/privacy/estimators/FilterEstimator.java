@@ -1,16 +1,15 @@
 package moa.streams.filters.privacy.estimators;
 
+import moa.options.AbstractOptionHandler;
+
 /**
  * Generic privacy filter estimator.
  */
-public interface FilterEstimator {
+public abstract class FilterEstimator extends AbstractOptionHandler {
 
 	/**
-	 * Restarts this estimator, preparing it for next use.
-	 * <p>
-	 * All classes implementing some kind of estimation
-	 * must be able to restart the estimator.
+	 * Serializable
 	 */
-	public void restart();
+	private static final long serialVersionUID = 2657667705854611884L;
 	
 }

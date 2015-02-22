@@ -2,17 +2,26 @@ package moa.streams.filters.privacy.estimators.disclosurerisk;
 
 import java.util.Vector;
 
+import moa.core.ObjectRepository;
+import moa.options.IntOption;
 import moa.streams.filters.privacy.InstancePair;
+import moa.streams.filters.privacy.estimators.FilterEstimator;
 import moa.streams.filters.privacy.utils.Metrics;
+import moa.tasks.TaskMonitor;
 import weka.core.Instance;
 
-public class BufferedIndividualRecordLinker implements DisclosureRiskEstimator {
+public class BufferedIndividualRecordLinker extends FilterEstimator implements DisclosureRiskEstimator {
+
+	/** Serializable */
+	private static final long serialVersionUID = 6462301962124723040L;
 
 	/** The current re-identification buffer (original instances) */
 	private Vector<Instance> originalInstancesBuffer;
 	
 	/** The size of the re-identification buffer */
-	private int bufferSize;
+	public IntOption bufferSizeOption = new IntOption("bufferSize", 'b', 
+			"The size of the buffer that holds original instances which are reidentified.", 
+			100, 10, Integer.MAX_VALUE);
 		
 	/** The number of re-identification hits */
 	private int recordLinkageHits;
@@ -28,7 +37,7 @@ public class BufferedIndividualRecordLinker implements DisclosureRiskEstimator {
 	public BufferedIndividualRecordLinker(final int bufferSize) {
 		this.recordLinkageHits = 0;
 		this.processedInstances = 0;
-		this.bufferSize = bufferSize;
+		this.bufferSizeOption.setValue(bufferSize);
 		this.originalInstancesBuffer = new Vector<Instance>(bufferSize);
 	}
 	
@@ -39,52 +48,28 @@ public class BufferedIndividualRecordLinker implements DisclosureRiskEstimator {
 		this(100);
 	}
 	
-	/**
-	 * @return the size of the re-identification buffer
-	 */
-	public int getBufferSize() {
-		return bufferSize;
-	}
-	
-	/**
-	 * Configures this estimator to allocate a re-identification buffer of the 
-	 * given size. <b>Please remember</b> to call {@link #restart()} some way or
-	 * another in order to prepare the estimator for next use.
-	 * 
-	 * @param bufferSize the size of the re-identification buffer
-	 */
-	public void setBufferSize(int bufferSize) {
-		this.bufferSize = bufferSize;
-	}
-	
-	/**
-	 * @return the number of instances processed
-	 */
-	public int getProcessedInstances() {
-		return processedInstances;
-	}
-	
-	/**
-	 * @return the number of re-identification hits
-	 */
-	public int getRecordLinkageHits() {
-		return recordLinkageHits;
-	}
-	
 	@Override
 	public void restart() {
 		this.recordLinkageHits = 0;
 		this.processedInstances = 0;
-		this.originalInstancesBuffer = new Vector<Instance>(bufferSize);
+		this.originalInstancesBuffer = new Vector<Instance>(bufferSizeOption.getValue());
 	}
 	
 	@Override
-	public double getCurrentDisclosureRisk() {
-		return (double)recordLinkageHits / (double)processedInstances ;
+	public void getDescription(StringBuilder sb, int indent) {
+		// TODO Auto-generated method stub
+		
 	}
 
 	@Override
-	public void estimateDisclosureRiskForInstancePair(InstancePair instancePair) {
+	protected void prepareForUseImpl(TaskMonitor monitor, ObjectRepository repository) {
+		this.recordLinkageHits = 0;
+		this.processedInstances = 0;
+		this.originalInstancesBuffer = new Vector<Instance>(bufferSizeOption.getValue());
+	}
+
+	@Override
+	public void performEstimationForInstances(InstancePair instancePair) {
 		//adds the instance, keeping the buffer with a maximum fixed size
 		addInstanceToBuffer(instancePair.originalInstance);
 		
@@ -124,11 +109,30 @@ public class BufferedIndividualRecordLinker implements DisclosureRiskEstimator {
 	 * Adds the given instance in the re-identification buffer and discards older instances if necessary.
 	 */
 	private void addInstanceToBuffer(Instance originalInstance) {
-		if (originalInstancesBuffer.size() >= bufferSize) {
+		if (originalInstancesBuffer.size() >= bufferSizeOption.getValue()) {
 			originalInstancesBuffer.remove(0); //remove the last one
 		}
 		originalInstancesBuffer.add(originalInstance);
 		++processedInstances;
+	}
+	
+	@Override
+	public double getCurrentDisclosureRisk() {
+		return (double)recordLinkageHits / (double)processedInstances ;
+	}
+	
+	/**
+	 * @return the number of instances processed
+	 */
+	public int getProcessedInstances() {
+		return processedInstances;
+	}
+	
+	/**
+	 * @return the number of re-identification hits
+	 */
+	public int getRecordLinkageHits() {
+		return recordLinkageHits;
 	}
 
 }

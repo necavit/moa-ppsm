@@ -1,13 +1,19 @@
 package moa.streams.filters.privacy.estimators.informationloss;
 
-import weka.core.Instance;
+import moa.core.ObjectRepository;
 import moa.streams.filters.privacy.InstancePair;
+import moa.streams.filters.privacy.estimators.FilterEstimator;
+import moa.tasks.TaskMonitor;
+import weka.core.Instance;
 
 /**
  * Gives an estimation of the information loss as the Sum of Squared Errors
  * (thus the name of the class, {@code SSEEstimator}.
  */
-public class SSEEstimator implements InformationLossEstimator {
+public class SSEEstimator extends FilterEstimator implements InformationLossEstimator {
+
+	/** Serializable */
+	private static final long serialVersionUID = 1363697727194768299L;
 
 	/** The current information loss (SSE error) */
 	private double currentError = 0.0;
@@ -22,6 +28,17 @@ public class SSEEstimator implements InformationLossEstimator {
 	}
 	
 	@Override
+	protected void prepareForUseImpl(TaskMonitor monitor, ObjectRepository repository) {
+		currentError = 0.0;
+		incrementalError = 0.0;
+	}
+	
+	@Override
+	public void getDescription(StringBuilder sb, int indent) {
+		// TODO Auto-generated method stub
+	}
+	
+	@Override
 	public double getCurrentInformationLoss() {
 		return currentError;
 	}
@@ -32,7 +49,7 @@ public class SSEEstimator implements InformationLossEstimator {
 	}
 	
 	@Override
-	public void estimateInformationLossForInstancePair(InstancePair instancePair) {
+	public void performEstimationForInstances(InstancePair instancePair) {
 		double lastError = currentError;
 		double error = 0.0;
 		

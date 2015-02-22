@@ -63,8 +63,8 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 	public Instance nextInstance() {
 		InstancePair instancePair = nextAnonymizedInstancePair();
 		if (instancePair != null) {
-			informationLossEstimator.estimateInformationLossForInstancePair(instancePair);
-			disclosureRiskEstimator.estimateDisclosureRiskForInstancePair(instancePair);
+			informationLossEstimator.performEstimationForInstances(instancePair);
+			disclosureRiskEstimator.performEstimationForInstances(instancePair);
 			return instancePair.anonymizedInstance;
 		}
 		else {
