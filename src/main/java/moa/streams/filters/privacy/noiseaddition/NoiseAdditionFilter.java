@@ -80,6 +80,12 @@ public class NoiseAdditionFilter extends PrivacyFilter {
 	}
 	
 	@Override
+	public void prepareAnonymizationFilterForUse() {
+		this.randomGenerator = new Random(randomSeedOption.getValue());
+		this.attValueObservers = new AutoExpandVector<Object>();
+	}
+	
+	@Override
 	public void restartFilter() {
 		this.randomGenerator = new Random(randomSeedOption.getValue());
 		this.attValueObservers = new AutoExpandVector<Object>();

@@ -3,11 +3,14 @@ package moa.streams.filters.privacy;
 import java.io.Serializable;
 
 import moa.core.InstancesHeader;
+import moa.core.ObjectRepository;
+import moa.options.ClassOption;
 import moa.streams.filters.AbstractStreamFilter;
 import moa.streams.filters.privacy.estimators.disclosurerisk.BufferedIndividualRecordLinker;
 import moa.streams.filters.privacy.estimators.disclosurerisk.DisclosureRiskEstimator;
 import moa.streams.filters.privacy.estimators.informationloss.InformationLossEstimator;
 import moa.streams.filters.privacy.estimators.informationloss.SSEEstimator;
+import moa.tasks.TaskMonitor;
 import weka.core.Instance;
 
 public abstract class PrivacyFilter extends AbstractStreamFilter implements AnonymizationFilter {
@@ -15,31 +18,40 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 	/** Please see {@link Serializable} */
 	private static final long serialVersionUID = 5485907750792490539L;
 	
+	/** The option for the estimator of the information loss */
+	public ClassOption informationLossEstimatorOption = new ClassOption("informationLossEstimator", 
+			'I', "The estimator of the information loss due to the anonymization process.", 
+			InformationLossEstimator.class, "SSEEstimator");
+	
 	/** The estimator of the information loss due to the anonymization */
 	private InformationLossEstimator informationLossEstimator;
+	
+	/** The option for the estimator of the disclosure risk */
+	public ClassOption disclosureRiskEstimatorOption = new ClassOption("disclosureRiskEstimator", 
+			'D', "The estimator of the disclosure risk of the output stream of instances.", 
+			DisclosureRiskEstimator.class, "BufferedIndividualRecordLinker");
 	
 	/** The estimator of the disclosure risk of the ouput stream of instances */
 	private DisclosureRiskEstimator disclosureRiskEstimator;
 	
 	/**
-	 * Builds a privacy filter with the given algorithms and estimators.
-	 * 
-	 * @param informationLossEstimator please see: {@link #informationLossEstimator}
-	 * @param disclosureRiskEstimator please see: {@link #disclosureRiskEstimator}
-	 */
-	public PrivacyFilter(InformationLossEstimator informationLossEstimator, DisclosureRiskEstimator disclosureRiskEstimator) {
-		this.informationLossEstimator = informationLossEstimator;
-		this.disclosureRiskEstimator = disclosureRiskEstimator;
-	}
-	
-	/**
-	 * Builds a privacy filter with default estimators. More precisely, the {@link #informationLossEstimator}
-	 * is set to be a {@link SSEEstimator} and the {@link #disclosureRiskEstimator} is set to be an instance
-	 * of the {@link BufferedIndividualRecordLinker}.
+	 * Builds a privacy filter with default estimators. ({@link SSEEstimator} and
+	 *  {@link BufferedIndividualRecordLinker}).
 	 */
 	public PrivacyFilter() {
-		this(new SSEEstimator(), //default information loss estimator 
-				new BufferedIndividualRecordLinker()); //default disclosure risk estimator
+		//empty constructor
+	}
+	
+	@Override
+	public void prepareForUseImpl(TaskMonitor monitor, ObjectRepository repository) {
+		//prepare the estimators of the filter
+		this.informationLossEstimator = 
+				(InformationLossEstimator) getPreparedClassOption(informationLossEstimatorOption);
+		this.disclosureRiskEstimator =
+				(DisclosureRiskEstimator) getPreparedClassOption(disclosureRiskEstimatorOption);
+		
+		//prepare the anonymization filter concrete implementation (subclasses)
+		prepareAnonymizationFilterForUse();
 	}
 	
 	@Override
