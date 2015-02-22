@@ -7,20 +7,12 @@ import moa.core.DoubleVector;
 import moa.core.GaussianEstimator;
 import moa.options.FloatOption;
 import moa.options.IntOption;
-import moa.streams.InstanceStream;
 import moa.streams.filters.privacy.InstancePair;
 import moa.streams.filters.privacy.PrivacyFilter;
 import weka.core.Instance;
 
 /**
  * Filter for adding random noise to examples in a stream.
- * <p>
- * Noise can be added to attribute values or to class labels, by customizing
- * the {@link NoiseAdder} used by this filter. This is the algorithm
- * performing the actual noise addition process. Please see 
- * {@link #NoiseAdditionFilter(InstanceStream, double, double)}, 
- * {@link #NoiseAdditionFilter(InstanceStream, long, double, double)} and
- * {@link #NoiseAdditionFilter(InstanceStream, NoiseAdder)}. 
  */
 public class NoiseAdditionFilter extends PrivacyFilter {
 	
@@ -31,7 +23,7 @@ public class NoiseAdditionFilter extends PrivacyFilter {
 	
 	/** Random generator seed */
 	public IntOption randomSeedOption = new IntOption("randomSeed", 'r', 
-			"The pseudo-random generator seed", 3141592, Integer.MIN_VALUE, Integer.MAX_VALUE);
+			"The pseudo-random generator seed.", 3141592, Integer.MIN_VALUE, Integer.MAX_VALUE);
 	
 	/** The fraction of class labels to disturb */
 	public FloatOption classNoiseFractionOption =  new FloatOption("classNoiseFraction", 'c', 
@@ -87,8 +79,7 @@ public class NoiseAdditionFilter extends PrivacyFilter {
 	
 	@Override
 	public void restartFilter() {
-		this.randomGenerator = new Random(randomSeedOption.getValue());
-		this.attValueObservers = new AutoExpandVector<Object>();
+		prepareAnonymizationFilterForUse();
 	}
 	
 	@Override
