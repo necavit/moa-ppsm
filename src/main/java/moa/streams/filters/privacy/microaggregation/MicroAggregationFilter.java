@@ -325,19 +325,4 @@ public class MicroAggregationFilter extends PrivacyFilter {
 		
 	}
 	
-} /*FIXME extends PrivacyFilter {
-
-	private static final long serialVersionUID = -1743973571383456371L;
-
-	public MicroAggregationFilter(InstanceStream inputStream) {
-		super(inputStream,
-			  new KNNMicroAggregation());
-	}
-
-	@Override
-	public void getDescription(StringBuilder sb, int indent) {
-		// TODO Auto-generated method stub
-	}
-	
 }
-*/
