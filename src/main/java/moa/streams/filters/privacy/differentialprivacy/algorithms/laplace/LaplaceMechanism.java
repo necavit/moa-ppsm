@@ -7,20 +7,9 @@ import weka.core.Instance;
 
 public class LaplaceMechanism {
 	
-	public static final long DEFAULT_RANDOM_SEED_VALUE = 1235711;
 	private LaplacianNoiseGenerator laplacianNoiseGenerator;
-	
-	public static final double DEFAULT_EPSILON_VALUE = 0.1;
 	private double epsilon;
 	private AutoExpandVector<LaplacianNoiseScaleEstimator> attributeScaleEstimators;
-	
-	public LaplaceMechanism() {
-		this(DEFAULT_RANDOM_SEED_VALUE, DEFAULT_EPSILON_VALUE);
-	}
-	
-	public LaplaceMechanism(double epsilon) {
-		this(DEFAULT_RANDOM_SEED_VALUE, epsilon);
-	}
 	
 	public LaplaceMechanism(long randomSeed, double epsilon) {
 		this.epsilon = epsilon;
@@ -38,7 +27,7 @@ public class LaplaceMechanism {
 			if (i != anonymizedInstance.classIndex()) {
 				LaplacianNoiseScaleEstimator scaleEstimator = attributeScaleEstimators.get(i);
 				if (anonymizedInstance.attribute(i).isNominal()) {
-					//TODO
+					//TODO add laplacian noise to nominal attributes
 				}
 				else { //numerical attribute
 					if (scaleEstimator == null) {
