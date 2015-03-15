@@ -70,7 +70,7 @@ public class Anonymize extends MainTask {
     
     public Anonymize() {
     	outputFileOption = new FileOption("anonymizationResultFile", 'O',
-    		"File to save the final report of the anonymization process.", "anonymizationReport", "moa", true);
+    		"File to save the final report of the anonymization process.", null, null, true);
 	}
     
 	@Override
