@@ -35,7 +35,7 @@ public class Anonymize extends MainTask {
 	/* **** Filter options **** */
 	public ClassOption filterOption = new ClassOption("filter", 'f',
             "Privacy filter to be applied.", PrivacyFilter.class, 
-            "noiseaddition.NoiseAdditionFilter"); //TODO when this is refactored, check the package of the default filter!!
+            "noiseaddition.NoiseAdditionFilter");
 	
 	/* **** Stream options **** */
 	public ClassOption streamOption = new ClassOption("stream", 's',
@@ -43,8 +43,8 @@ public class Anonymize extends MainTask {
             "generators.RandomRBFGenerator");
 	
 	public IntOption maxInstancesOption = new IntOption("maxInstances", 'm',
-            "Maximum number of instances to write to file.", 10000000, 0,
-            Integer.MAX_VALUE);
+            "Maximum number of instances to process. If set to -1, keep processing until the" +
+            " input stream runs out of instance (no maximum is set).", -1, -1, Integer.MAX_VALUE);
 	
 	/* **** Evaluation options **** */
 	public FlagOption silenceEvaluationOption = new FlagOption("silenceEvaluation", 'q', 
@@ -122,7 +122,48 @@ public class Anonymize extends MainTask {
 		}
 		return file;
 	}
-
+	
+	private void writeArffHeader(Writer arffWriter, InstanceStream stream) throws IOException {
+		if (!silenceAnonymizationOption.isSet() && !suppressHeaderOption.isSet()) {
+			arffWriter.write(stream.getHeader().toString());
+            arffWriter.write("\n");
+		}
+	}
+	
+	private void writeEvaluationHeader(Writer evaluationWriter, PrivacyFilter filter) throws IOException {
+		if (!silenceEvaluationOption.isSet()) {
+			evaluationWriter.write(filter.getEvaluation().getEvaluationCSVHeader());
+			evaluationWriter.write("\n");
+		}
+	}
+	
+	private void writeAnonymizedInstance(Writer arffWriter, Instance instance) throws IOException {
+		if (!silenceAnonymizationOption.isSet()) {
+			arffWriter.write(instance.toString());
+			arffWriter.write("\n");
+		}
+	}
+	
+	private void writeEvaluation(Writer evaluationWriter, Evaluation evaluation) throws IOException {
+		if (!silenceEvaluationOption.isSet()) {
+			evaluationWriter.write(evaluation.getEvaluationCSVRecord());
+			evaluationWriter.write("\n");
+		}
+	}
+	
+	private void closeWriter(Writer writer) throws IOException {
+		if (writer != null) {
+			writer.flush();
+			writer.close();
+		}
+	}
+	
+	private boolean keepProcessing(int processedInstances, PrivacyFilter filter) {
+		return filter.hasMoreInstances() &&                          // as long as the stream has instances,
+				(maxInstancesOption.getValue() < 0 ||                //  process ALL instance in the stream
+				processedInstances < maxInstancesOption.getValue()); //  OR process up to a maximum
+	}
+	
 	@Override
 	protected Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
 		//prepare the stream and the filter
@@ -136,56 +177,31 @@ public class Anonymize extends MainTask {
 		
 		try {
 			//write headers for both output files
-			if (arffWriter != null && !suppressHeaderOption.isSet()) {
-				arffWriter.write(stream.getHeader().toString());
-	            arffWriter.write("\n");
-			}
-			if (evaluationWriter != null) {
-				evaluationWriter.write(filter.getEvaluation().getEvaluationCSVHeader());
-				evaluationWriter.write("\n");
-			}
+			writeArffHeader(arffWriter, stream);
+			writeEvaluationHeader(evaluationWriter, filter);
 			
 			//begin filtering
 			monitor.setCurrentActivityDescription(MONITOR_INITIAL_STATE);
 			int anonymizedInstances = 0;
-			while (anonymizedInstances < maxInstancesOption.getValue() && filter.hasMoreInstances()) {
-				//request next anonymized instance
+			while (keepProcessing(anonymizedInstances, filter)) {
 				Instance instance = filter.nextInstance();
-				
-				//instance could be null if the filter is buffered (as long as the filter buffer is not yet full)
 				if (instance != null) {
 					anonymizedInstances++;
+					writeAnonymizedInstance(arffWriter, instance);
 					
-					//write instance
-					if (arffWriter != null) {
-						arffWriter.write(instance.toString());
-						arffWriter.write("\n");
-					}
-					
-					//update evaluation
+					//update evaluation if needed (check the evaluation update rate)
 					if (anonymizedInstances % evaluationUpdateRateOption.getValue() == 0) {
 						Evaluation evaluation = filter.getEvaluation();
 						monitor.setCurrentActivityDescription(
 								String.format(MONITOR_EVALUATION_STATE, anonymizedInstances));
-						
-						//write evauation
-						if (evaluationWriter != null) {
-							evaluationWriter.write(evaluation.getEvaluationCSVRecord());
-							evaluationWriter.write("\n");
-						}
+						writeEvaluation(evaluationWriter, evaluation);
 					}
 				}
 			}
 			
 			//flush and close the writer streams
-			if (arffWriter != null) {
-				arffWriter.flush();
-				arffWriter.close();
-			}
-			if (evaluationWriter != null) {
-				evaluationWriter.flush();
-				evaluationWriter.close();
-			}
+			closeWriter(arffWriter);
+			closeWriter(evaluationWriter);
 			
 			//return report
 			return getAnonymizationReport(stream, filter, anonymizedInstances,
