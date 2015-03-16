@@ -3,6 +3,7 @@ package moa.streams.filters.privacy.estimators.informationloss;
 import moa.core.ObjectRepository;
 import moa.streams.filters.privacy.InstancePair;
 import moa.streams.filters.privacy.estimators.FilterEstimator;
+import moa.streams.filters.privacy.utils.Metrics;
 import moa.tasks.TaskMonitor;
 import weka.core.Instance;
 
@@ -50,17 +51,11 @@ public class SSEEstimator extends FilterEstimator implements InformationLossEsti
 	
 	@Override
 	public void performEstimationForInstances(InstancePair instancePair) {
-		double lastError = currentError;
-		double error = 0.0;
-		
 		Instance x = instancePair.originalInstance;
 		Instance y = instancePair.anonymizedInstance;
 		
-		//for each attribute, get the difference and sum its square to the global error
-		for (int i = 0; i < x.numAttributes(); ++i) {
-			double difference = x.value(i) - y.value(i);
-			error += difference * difference;
-		}
+		double lastError = currentError;
+		double error = Metrics.sse(x, y);
 		
 		assert(error >= 0.0);
 		

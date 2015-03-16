@@ -8,6 +8,20 @@ import weka.core.Instance;
  */
 public class Metrics {
 
+	public static double sse(Instance x, Instance y) {
+		double dist = 0.0;
+		for (int i = 0; i < x.numAttributes(); ++i){
+			if (i != x.classIndex()) { //skip all those variables that are the target class
+				if (x.attribute(i).isNumeric()){
+					dist += (x.value(i) - y.value(i)) * (x.value(i) - y.value(i));
+				} else {
+					dist += (x.value(i) !=  y.value(i)) ? 1.0 : 0.0;
+				}
+			}
+		}
+		return dist;
+	}
+	
 	/**
 	 * Computes the distance between two given instances, using the following scheme:
 	 * <br>
