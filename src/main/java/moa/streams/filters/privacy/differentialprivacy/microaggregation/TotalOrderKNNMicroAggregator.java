@@ -3,6 +3,8 @@ package moa.streams.filters.privacy.differentialprivacy.microaggregation;
 import java.util.List;
 import java.util.Vector;
 
+import moa.streams.filters.privacy.InstancePair;
+
 import weka.core.Attribute;
 import weka.core.Instance;
 
@@ -11,6 +13,7 @@ public class TotalOrderKNNMicroAggregator {
 	private int bufferSizeThreshold;
 	private boolean startToProcess;
 	
+	private Vector<Instance> originalInstanceBuffer;
 	private Vector<Instance> instanceBuffer;
 	private Vector<Boolean> anonymized;
 	
@@ -19,12 +22,13 @@ public class TotalOrderKNNMicroAggregator {
 	public TotalOrderKNNMicroAggregator(int k, int bufferSizeThreshold) {
 		this.anonymized = new Vector<Boolean>(bufferSizeThreshold);
 		this.bufferSizeThreshold = bufferSizeThreshold;
+		this.originalInstanceBuffer = new Vector<Instance>(bufferSizeThreshold);
 		this.instanceBuffer = new Vector<Instance>(bufferSizeThreshold);
 		this.startToProcess = false;
 		this.clusterer = new TotalOrderKNNClusterer(k);
 	}
-
-	public Instance nextAnonymizedInstance() {
+	
+	public InstancePair nextAnonymizedInstancePair() {
 		if (startToProcess) {
 			return processNextInstance();
 		}
@@ -34,7 +38,8 @@ public class TotalOrderKNNMicroAggregator {
 	}
 
 	public void addInstance(Instance originalInstance) {
-		instanceBuffer.add(originalInstance);
+		originalInstanceBuffer.add(originalInstance);
+		instanceBuffer.add((Instance)originalInstance.copy());
 		anonymized.add(false);
 		clusterer.updateTargetInstance(originalInstance);
 		if (instanceBuffer.size() >= bufferSizeThreshold) {
@@ -46,7 +51,7 @@ public class TotalOrderKNNMicroAggregator {
 		return instanceBuffer.size() > 0;
 	}
 	
-	private Instance processNextInstance() {
+	private InstancePair processNextInstance() {
 		final int top = 0;
 		
 		if (!anonymized.get(top)) {
@@ -54,7 +59,7 @@ public class TotalOrderKNNMicroAggregator {
 		}
 		
 		anonymized.remove(top);
-		return instanceBuffer.remove(top);
+		return new InstancePair(originalInstanceBuffer.remove(top), instanceBuffer.remove(top));
 	}
 	
 	private void anonymizeNextInstance() {

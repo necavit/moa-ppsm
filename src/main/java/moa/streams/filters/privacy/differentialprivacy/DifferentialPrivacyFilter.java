@@ -53,13 +53,20 @@ public class DifferentialPrivacyFilter extends PrivacyFilter {
 	
 	@Override
 	public InstancePair nextAnonymizedInstancePair() {
-		Instance originalInstance = (Instance) inputStream.nextInstance().copy();
-		microAggregator.addInstance(originalInstance);
+		if (inputStream.hasMoreInstances()) {
+			// Check if the stream has more instances, in order to avoid asking for instances
+			//  that do not exist. Even when the filter user has called hasMoreInstances()
+			//  on this filter, there is no guarantee that the one who has more instances
+			//  is the filter!! See the hasMoreInstances() implementation to understand this.
+			Instance originalInstance = (Instance) inputStream.nextInstance().copy();
+			microAggregator.addInstance(originalInstance);
+		}
 		
-		Instance microaggregatedInstance = microAggregator.nextAnonymizedInstance();
-		if (microaggregatedInstance != null) {
-			Instance anonymizedInstance = laplaceMechanism.addLaplaceNoise(microaggregatedInstance);
-			return new InstancePair(originalInstance, anonymizedInstance);
+		InstancePair microaggregatedPair = microAggregator.nextAnonymizedInstancePair();
+		if (microaggregatedPair != null) {
+			Instance anonymizedInstance = laplaceMechanism.addLaplaceNoise(microaggregatedPair.anonymizedInstance);
+			return new InstancePair(microaggregatedPair.originalInstance, 
+									anonymizedInstance);
 		}
 		else {
 			return null;
