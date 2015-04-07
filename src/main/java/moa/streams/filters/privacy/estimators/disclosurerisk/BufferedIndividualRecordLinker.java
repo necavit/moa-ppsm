@@ -11,7 +11,7 @@ import moa.tasks.TaskMonitor;
 import weka.core.Instance;
 
 public class BufferedIndividualRecordLinker extends FilterEstimator implements DisclosureRiskEstimator {
-
+	
 	/** Serializable */
 	private static final long serialVersionUID = 6462301962124723040L;
 
@@ -22,9 +22,8 @@ public class BufferedIndividualRecordLinker extends FilterEstimator implements D
 	public IntOption bufferSizeOption = new IntOption("bufferSize", 'b', 
 			"The size of the buffer that holds original instances which are reidentified.", 
 			100, 10, Integer.MAX_VALUE);
-		
-	/** The number of re-identification hits */
-	private int recordLinkageHits;
+	
+	private double linkageProbabilitySum;
 	
 	/** The number of already procesed instances */
 	private int processedInstances;
@@ -35,7 +34,7 @@ public class BufferedIndividualRecordLinker extends FilterEstimator implements D
 	 * @param bufferSize the size of the buffer of original instances (the re-identification buffer)
 	 */
 	public BufferedIndividualRecordLinker(final int bufferSize) {
-		this.recordLinkageHits = 0;
+		this.linkageProbabilitySum = 0.0;
 		this.processedInstances = 0;
 		this.bufferSizeOption.setValue(bufferSize);
 		this.originalInstancesBuffer = new Vector<Instance>(bufferSize);
@@ -50,7 +49,7 @@ public class BufferedIndividualRecordLinker extends FilterEstimator implements D
 	
 	@Override
 	public void restart() {
-		this.recordLinkageHits = 0;
+		this.linkageProbabilitySum = 0.0;
 		this.processedInstances = 0;
 		this.originalInstancesBuffer = new Vector<Instance>(bufferSizeOption.getValue());
 	}
@@ -63,7 +62,7 @@ public class BufferedIndividualRecordLinker extends FilterEstimator implements D
 
 	@Override
 	protected void prepareForUseImpl(TaskMonitor monitor, ObjectRepository repository) {
-		this.recordLinkageHits = 0;
+		this.linkageProbabilitySum = 0.0;
 		this.processedInstances = 0;
 		this.originalInstancesBuffer = new Vector<Instance>(bufferSizeOption.getValue());
 	}
@@ -73,36 +72,42 @@ public class BufferedIndividualRecordLinker extends FilterEstimator implements D
 		//adds the instance, keeping the buffer with a maximum fixed size
 		addInstanceToBuffer(instancePair.originalInstance);
 		
-		//get nearest instances (indexes) to the anonymized one
-		int guess = guessNearestInstance(instancePair.anonymizedInstance);
+		estimateLinkageProbabilityForInstance(instancePair.anonymizedInstance);
+	}
+	
+	private void estimateLinkageProbabilityForInstance(final Instance anonymizedInstance) {
+		Vector<Integer> nearestInstances = getNearestInstances(anonymizedInstance);
 		
-		//check if the nearest guesses contain the target one
-		if (guess == (originalInstancesBuffer.size() - 1)) {
-			++recordLinkageHits;
+		System.err.println("Nearest instances: " + nearestInstances.size());
+		
+		final int targetInstance = originalInstancesBuffer.size() - 1;
+		if (nearestInstances.contains(targetInstance)) {
+			linkageProbabilitySum += (double) (1.0 / (double) nearestInstances.size());
+		}
+		else {
+			// do nothing (add 0 to the probability sum)
 		}
 	}
 	
-	/**
-	 * @param targetInstance the target against which the re-identification is performed
-	 * @return the index of the instance in the buffer that is considered to be the target one
-	 */
-	private int guessNearestInstance(final Instance targetInstance) {
-		double minimum = 0.0;
-		int index = 0;
-		for (int i = 0; i < originalInstancesBuffer.size(); ++i) {
-			double distance = Metrics.distance(targetInstance, originalInstancesBuffer.get(i));
-			if (i == 0) {
+	private Vector<Integer> getNearestInstances(final Instance anonymizedInstance) {
+		//initialization
+		double minimum = Metrics.distance(anonymizedInstance, originalInstancesBuffer.get(0));
+		Vector<Integer> indices = new Vector<Integer>();
+		indices.add(0);
+		
+		//traversal
+		for (int i = 1; i < originalInstancesBuffer.size(); ++i) {
+			double distance = Metrics.distance(anonymizedInstance, originalInstancesBuffer.get(i));
+			if (distance < minimum) {
 				minimum = distance;
+				indices = new Vector<Integer>();
+				indices.add(i);
 			}
-			else {
-				if (distance < minimum) {
-					minimum = distance;
-					index = i;
-				}
+			else if (distance == minimum) {
+				indices.add(i);
 			}
 		}
-		
-		return index;
+		return indices;
 	}
 	
 	/**
@@ -118,21 +123,8 @@ public class BufferedIndividualRecordLinker extends FilterEstimator implements D
 	
 	@Override
 	public double getCurrentDisclosureRisk() {
-		return (double)recordLinkageHits / (double)processedInstances ;
-	}
-	
-	/**
-	 * @return the number of instances processed
-	 */
-	public int getProcessedInstances() {
-		return processedInstances;
-	}
-	
-	/**
-	 * @return the number of re-identification hits
-	 */
-	public int getRecordLinkageHits() {
-		return recordLinkageHits;
+		return (100.0 * linkageProbabilitySum) / (double) processedInstances;
+		//return (double)recordLinkageHits / (double)processedInstances ;
 	}
 
 }
