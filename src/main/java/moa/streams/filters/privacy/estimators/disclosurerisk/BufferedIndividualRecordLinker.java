@@ -78,8 +78,6 @@ public class BufferedIndividualRecordLinker extends FilterEstimator implements D
 	private void estimateLinkageProbabilityForInstance(final Instance anonymizedInstance) {
 		Vector<Integer> nearestInstances = getNearestInstances(anonymizedInstance);
 		
-		System.err.println("Nearest instances: " + nearestInstances.size());
-		
 		final int targetInstance = originalInstancesBuffer.size() - 1;
 		if (nearestInstances.contains(targetInstance)) {
 			linkageProbabilitySum += (double) (1.0 / (double) nearestInstances.size());
@@ -123,8 +121,7 @@ public class BufferedIndividualRecordLinker extends FilterEstimator implements D
 	
 	@Override
 	public double getCurrentDisclosureRisk() {
-		return (100.0 * linkageProbabilitySum) / (double) processedInstances;
-		//return (double)recordLinkageHits / (double)processedInstances ;
+		return (linkageProbabilitySum) / (double) processedInstances;
 	}
 
 }
