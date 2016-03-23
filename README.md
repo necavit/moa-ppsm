@@ -33,17 +33,13 @@ The design of the library enables easy extensibility, plugging in new SDC method
 Four `PrivacyFilter`s are available, adapting well known SDC methods to the *stream mining* environment for which MOA was built for:
 
 * `NoiseAdditionFilter`: the simplest of the filters, adds random gaussian noise to the data being streamed.
-* `RankSwappingFilter`:
-* `MicroaggregationFilter`:
-* `DifferentialPrivacyFilter`:
+* `RankSwappingFilter`: swaps values of variables across instances in the buffer, within a certain range.
+* `MicroaggregationFilter`: clusters the data stream continuously, then computing aggregates and substituting the values in the instances of a cluster.
+* `DifferentialPrivacyFilter`: combines the microaggregation scheme with a Laplacian noise addition, to achieve differential privacy in the streaming dataset.
 
 The following (incomplete) diagram illustrates the structure of the filters classes:
 
 ![moa-ppsm class diagram](doc/img/refactored-ppsm-class-diagram.png)
-
-These classes are organized in packages, easing the extensibility and readability of the code base as follows:
-
-![moa-ppsm package diagram](doc/img/ppsm-package-diagram.png)
 
 ## Usage
 
