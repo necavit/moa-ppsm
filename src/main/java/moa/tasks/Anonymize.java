@@ -32,8 +32,10 @@ public class Anonymize extends MainTask {
 
 	private static final String MONITOR_UPDATE_STATE = "i: %d";
 
-	private static final String THROUGHPUT_CSV_HEADER = "Instances,TotalTime[s],IncrInstances,IncrTime[s]";
-	private static final String THROUGHPUT_CSV_RECORD = "%d,%.3f,%d,%.3f";
+	private static final String THROUGHPUT_CSV_HEADER = "Instances,TotalTime[s],"
+															+ "IncrInstances,IncrTime[s],Throughput[ins/s]";
+	
+	private static final String THROUGHPUT_CSV_RECORD = "%d,%.3f,%d,%.3f,%.2f";
 	
 	/* **** **** **** TASK OPTIONS **** **** **** */
 	
@@ -59,8 +61,9 @@ public class Anonymize extends MainTask {
     		"Destination CSV file for the anonymization process evaluation.", null, "csv", true);
     
     /* **** Throughput evaluation options **** */
-    public IntOption throughputEvaluationUpdateRateOption = new IntOption("evaluationUpdateRate", 'U',
+    public IntOption throughputEvaluationUpdateRateOption = new IntOption("throughputUpdateRate", 'U',
 			"Number of instances to skip between throughput evaluation updates.", 100, 1, Integer.MAX_VALUE);
+    
     public FileOption throughputEvaluationFileOption = new FileOption("throughputEvaluationFile", 't',
     		"Destination CSV file for the evaluation of the processing throughput of the filter", null, "csv", true);
     
@@ -166,9 +169,13 @@ public class Anonymize extends MainTask {
 		return THROUGHPUT_CSV_HEADER;
 	}
 	
-	private String getThroughputCSVRecord(long instances, long totalTime, int deltaInstances, long deltaTime) {
+	private String getThroughputCSVRecord(long instances, long totalTimeMillis, 
+										  int deltaInstances, long deltaTimeMillis) {
+		float totalSeconds = millisToSeconds(totalTimeMillis);
+		float deltaSeconds = millisToSeconds(deltaTimeMillis);
+		float throughput = deltaInstances/deltaSeconds;
 		return String.format(THROUGHPUT_CSV_RECORD,
-				instances, millisToSeconds(totalTime), deltaInstances, millisToSeconds(deltaTime));
+				instances, totalSeconds, deltaInstances, deltaSeconds, throughput);
 	}
 	
 	/** Formats the multiline string that represents the report of the anonimization report */
@@ -213,7 +220,9 @@ public class Anonymize extends MainTask {
 			if (!suppressHeaderOption.isSet()) {
 				writeToFile(arffWriter, stream.getHeader().toString());
 			}
-			writeToFile(evaluationWriter, filter.getEvaluation().getEvaluationCSVHeader());
+			if (filter.isEvaluationEnabled()) { //if the evaluation is not enabled, an exception is thrown
+				writeToFile(evaluationWriter, filter.getEvaluation().getEvaluationCSVHeader());
+			}
 			writeToFile(throughputWriter, getThroughputCSVHeader());
 			
 			//begin filtering
