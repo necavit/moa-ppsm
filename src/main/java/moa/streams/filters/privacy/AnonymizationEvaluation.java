@@ -1,6 +1,6 @@
 package moa.streams.filters.privacy;
 
-public class AnonymizationEvaluation implements Evaluation {
+public final class AnonymizationEvaluation implements PrivacyEvaluation {
 
 	private final double disclosureRisk;
 	private final double incrementalInformationLoss;
@@ -36,6 +36,21 @@ public class AnonymizationEvaluation implements Evaluation {
 		builder.append(",");
 		builder.append(String.format("%.6f", informationLoss));
 		return builder.toString();
+	}
+	
+	@Override
+	public double getDisclosureRisk() {
+		return disclosureRisk;
+	}
+	
+	@Override
+	public double getIncrementalInformationLoss() {
+		return incrementalInformationLoss; 
+	}
+	
+	@Override
+	public double getInformationLoss() {
+		return informationLoss;
 	}
 	
 }

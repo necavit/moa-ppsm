@@ -12,8 +12,9 @@ import moa.options.FileOption;
 import moa.options.FlagOption;
 import moa.options.IntOption;
 import moa.streams.InstanceStream;
-import moa.streams.filters.privacy.Evaluation;
+import moa.streams.filters.privacy.PrivacyEvaluation;
 import moa.streams.filters.privacy.PrivacyFilter;
+import moa.streams.filters.privacy.PrivacyFilter.EvaluationNotEnabledException;
 import weka.core.Instance;
 
 public class Anonymize extends MainTask {
@@ -25,22 +26,25 @@ public class Anonymize extends MainTask {
 			" it is anonymized. An evaluation is also performed, based on the estimated disclosure risk of the " +
 			"output dataset, along with an estimation of the information loss due to the anonymization process.";
 	
-	private static final String MONITOR_INITIAL_STATE = "Writing anonymized stream to ARFF file.";
+	private static final String MONITOR_INITIAL_STATE = "Anonymizing stream...";
 	
-	private static final String MONITOR_EVALUATION_STATE = "Writing anonymized stream to ARFF file. " +
-			"%d already anonymized instances.";
+	private static final String MONITOR_EVALUATION_STATE = "i: %d, dr: %.3f, iil: %.2f, il: %.2f";
+
+	private static final String MONITOR_UPDATE_STATE = "i: %d";
 	
 	/* **** **** **** TASK OPTIONS **** **** **** */
 	
 	/* **** Filter options **** */
 	public ClassOption filterOption = new ClassOption("filter", 'f',
             "Privacy filter to be applied.", PrivacyFilter.class, 
-            "noiseaddition.NoiseAdditionFilter");
+            "noiseaddition.NoiseAdditionFilter -c 0.0 -a 0.25");
+	private PrivacyFilter filter;
 	
 	/* **** Stream options **** */
 	public ClassOption streamOption = new ClassOption("stream", 's',
             "Stream to be filtered.", InstanceStream.class,
             "generators.RandomRBFGenerator");
+	private InstanceStream stream;
 	
 	public IntOption maxInstancesOption = new IntOption("maxInstances", 'm',
             "Maximum number of instances to process. If set to -1, keep processing until the" +
@@ -51,7 +55,7 @@ public class Anonymize extends MainTask {
 			"Disable dumping evaluation output to a file.");
 	
 	public IntOption evaluationUpdateRateOption = new IntOption("evaluationUpdateRate", 'u',
-			"Number of instances to skip between anonymization evaluation updates.", 10, 1, Integer.MAX_VALUE);
+			"Number of instances to skip between anonymization evaluation updates.", 100, 1, Integer.MAX_VALUE);
 
     public FileOption evaluationFileOption = new FileOption("evaluationFile", 'e', 
     		"Destination CSV file for the anonymization process evaluation.", "evaluation", "csv", true);
@@ -101,7 +105,8 @@ public class Anonymize extends MainTask {
 	private Writer getEvaluationOutputFile() {
 		File evaluationFile = null;
 		//check whether the evaluation output is silenced
-		if (!silenceEvaluationOption.isSet()) {
+		if (!silenceEvaluationOption.isSet()
+				&& filter.isEvaluationEnabled()) {
 			//get a writable file reference
 			evaluationFile = getFile(evaluationFileOption);
 			try {
@@ -130,8 +135,10 @@ public class Anonymize extends MainTask {
 		}
 	}
 	
-	private void writeEvaluationHeader(Writer evaluationWriter, PrivacyFilter filter) throws IOException {
-		if (!silenceEvaluationOption.isSet()) {
+	private void writeEvaluationHeader(Writer evaluationWriter, PrivacyFilter filter)
+											throws IOException, EvaluationNotEnabledException {
+		if (!silenceEvaluationOption.isSet()
+				&& filter.isEvaluationEnabled()) {
 			evaluationWriter.write(filter.getEvaluation().getEvaluationCSVHeader());
 			evaluationWriter.write("\n");
 		}
@@ -144,8 +151,9 @@ public class Anonymize extends MainTask {
 		}
 	}
 	
-	private void writeEvaluation(Writer evaluationWriter, Evaluation evaluation) throws IOException {
-		if (!silenceEvaluationOption.isSet()) {
+	private void writeEvaluation(Writer evaluationWriter, PrivacyEvaluation evaluation) throws IOException {
+		if (!silenceEvaluationOption.isSet()
+				&& filter.isEvaluationEnabled()) {
 			evaluationWriter.write(evaluation.getEvaluationCSVRecord());
 			evaluationWriter.write("\n");
 		}
@@ -158,7 +166,7 @@ public class Anonymize extends MainTask {
 		}
 	}
 	
-	private boolean keepProcessing(int processedInstances, PrivacyFilter filter) {
+	private boolean keepProcessing(long processedInstances, PrivacyFilter filter) {
 		return filter.hasMoreInstances() &&                          // as long as the stream has instances,
 				(maxInstancesOption.getValue() < 0 ||                //  process ALL instance in the stream
 				processedInstances < maxInstancesOption.getValue()); //  OR process up to a maximum
@@ -167,8 +175,8 @@ public class Anonymize extends MainTask {
 	@Override
 	protected Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
 		//prepare the stream and the filter
-		InstanceStream stream = (InstanceStream) getPreparedClassOption(streamOption);
-		PrivacyFilter filter = (PrivacyFilter) getPreparedClassOption(filterOption);
+		this.stream = (InstanceStream) getPreparedClassOption(streamOption);
+		this.filter = (PrivacyFilter) getPreparedClassOption(filterOption);
 		filter.setInputStream(stream);
 		
 		//prepare the potential necessary files and variables
@@ -182,7 +190,7 @@ public class Anonymize extends MainTask {
 			
 			//begin filtering
 			monitor.setCurrentActivityDescription(MONITOR_INITIAL_STATE);
-			int anonymizedInstances = 0;
+			long anonymizedInstances = 0;
 			while (keepProcessing(anonymizedInstances, filter)) {
 				Instance instance = filter.nextInstance();
 				if (instance != null) {
@@ -191,10 +199,21 @@ public class Anonymize extends MainTask {
 					
 					//update evaluation if needed (check the evaluation update rate)
 					if (anonymizedInstances % evaluationUpdateRateOption.getValue() == 0) {
-						Evaluation evaluation = filter.getEvaluation();
-						monitor.setCurrentActivityDescription(
-								String.format(MONITOR_EVALUATION_STATE, anonymizedInstances));
-						writeEvaluation(evaluationWriter, evaluation);
+						//check whether the evaluation is enabled to avoid exceptions
+						if (filter.isEvaluationEnabled()) {
+							PrivacyEvaluation evaluation = filter.getEvaluation();
+							writeEvaluation(evaluationWriter, evaluation);
+							monitor.setCurrentActivityDescription(
+								String.format(MONITOR_EVALUATION_STATE, anonymizedInstances,
+										evaluation.getDisclosureRisk(),
+										evaluation.getIncrementalInformationLoss(),
+										evaluation.getInformationLoss())
+							);
+						}
+						else {
+							monitor.setCurrentActivityDescription(
+								String.format(MONITOR_UPDATE_STATE, anonymizedInstances));
+						}
 					}
 				}
 			}
@@ -203,15 +222,27 @@ public class Anonymize extends MainTask {
 			closeWriter(arffWriter);
 			closeWriter(evaluationWriter);
 			
+			//get the necessary data for the report
+			double disclosureRisk = 0.0;
+			double informationLoss = 0.0;
+			if (filter.isEvaluationEnabled()) {
+				PrivacyEvaluation finalEvaluation = filter.getEvaluation();
+				disclosureRisk = finalEvaluation.getDisclosureRisk();
+				informationLoss = finalEvaluation.getInformationLoss();
+			}
 			//return report
-			return getAnonymizationReport(stream, filter, anonymizedInstances,
-											filter.getCurrentDisclosureRisk(), filter.getCurrentInformationLoss());
-		} catch (Exception e) {
+			return getAnonymizationReport(stream, filter, 
+					anonymizedInstances,
+					disclosureRisk,	informationLoss);
+		} catch (IOException e) {
 			throw new RuntimeException("Failed to complete the task.", e);
+		} catch (EvaluationNotEnabledException e) {
+			throw new RuntimeException("An evaluation was requested, but the estimators were disabled", e);
 		}
 	}
 	
-	private String getAnonymizationReport(InstanceStream stream, PrivacyFilter filter, int anonymizedInstances,
+	private String getAnonymizationReport(InstanceStream stream, PrivacyFilter filter,
+			long anonymizedInstances,
 			double disclosureRisk, double informationLoss) {
 		StringBuilder builder = new StringBuilder(1024);
 		builder.append("**** **** **** **** **** ANONYMIZATION TASK COMPLETED **** **** **** **** ****\n");
@@ -222,8 +253,11 @@ public class Anonymize extends MainTask {
 		if (!silenceAnonymizationOption.isSet()) {
 			builder.append("and have been stored in the file: " + arffFileOption.getFile().getPath() + "\n");
 		}
-		builder.append("Total disclosure risk:  " + String.format("%.12f", disclosureRisk) + "\n");
-		builder.append("Total information loss: " + String.format("%.12f", informationLoss) + "\n");
+		if (!silenceEvaluationOption.isSet()
+				&& filter.isEvaluationEnabled()) {
+			builder.append("Total disclosure risk:  " + String.format("%.12f", disclosureRisk) + "\n");
+			builder.append("Total information loss: " + String.format("%.12f", informationLoss) + "\n");
+		}
 		builder.append("**** **** **** **** **** **** **** **** **** **** **** **** **** **** **** ****\n");
 		return builder.toString();
 	}

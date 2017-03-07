@@ -93,7 +93,7 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 		restartFilter();
 	}
 	
-	public Evaluation getEvaluation() throws EvaluationNotEnabledException {
+	public PrivacyEvaluation getEvaluation() throws EvaluationNotEnabledException {
 		if (evaluationEnabledOption.isSet()) {
 			return new AnonymizationEvaluation(
 				disclosureRiskEstimator.getCurrentDisclosureRisk(), 
@@ -152,6 +152,10 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 	 */
 	public void setInformationLossEstimator(InformationLossEstimator informationLossEstimator) {
 		this.informationLossEstimator = informationLossEstimator;
+	}
+	
+	public boolean isEvaluationEnabled() {
+		return evaluationEnabledOption.isSet();
 	}
 	
 	public class EvaluationNotEnabledException extends Exception {
