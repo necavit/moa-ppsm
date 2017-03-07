@@ -31,6 +31,9 @@ public class Anonymize extends MainTask {
 	private static final String MONITOR_EVALUATION_STATE = "i: %d, dr: %.3f, iil: %.2f, il: %.2f";
 
 	private static final String MONITOR_UPDATE_STATE = "i: %d";
+
+	private static final String THROUGHPUT_CSV_HEADER = "Instances,TotalTime[s],IncrInstances,IncrTime[s]";
+	private static final String THROUGHPUT_CSV_RECORD = "%d,%.3f,%d,%.3f";
 	
 	/* **** **** **** TASK OPTIONS **** **** **** */
 	
@@ -55,9 +58,15 @@ public class Anonymize extends MainTask {
     public FileOption evaluationFileOption = new FileOption("evaluationFile", 'e', 
     		"Destination CSV file for the anonymization process evaluation.", null, "csv", true);
     
+    /* **** Throughput evaluation options **** */
+    public IntOption throughputEvaluationUpdateRateOption = new IntOption("evaluationUpdateRate", 'U',
+			"Number of instances to skip between throughput evaluation updates.", 100, 1, Integer.MAX_VALUE);
+    public FileOption throughputEvaluationFileOption = new FileOption("throughputEvaluationFile", 't',
+    		"Destination CSV file for the evaluation of the processing throughput of the filter", null, "csv", true);
+    
     /* **** Anonymized output options **** */
     public FileOption arffFileOption = new FileOption("arffFile", 'a',
-            "Destination ARFF file for the anonymized dataset.", "anonymized", "arff", true);
+            "Destination ARFF file for the anonymized dataset.", null, "arff", true);
     
     public FlagOption suppressHeaderOption = new FlagOption("suppressHeader",
             'h', "Suppress header from output.");
@@ -82,6 +91,14 @@ public class Anonymize extends MainTask {
 		return String.class;
 	}
 	
+	/**
+	 * Gets a reference for a file specified in the provided {@code fileOption}.
+	 * If no file is specified by such option, the returned reference is {@code null}.
+	 * The file gets appended the default extension if the specification did not contain it
+	 * 
+	 * @param fileOption a {@code FileOption} representing a file
+	 * @return the {@code File} represented in the option or {@code null}
+	 */
 	private File getFileWithExtension(FileOption fileOption) {
 		File file = fileOption.getFile();
 		if (file != null) {
@@ -115,6 +132,7 @@ public class Anonymize extends MainTask {
 		else return null;
 	}
 	
+	/** Writes the {@code content} to the file opened in the provided {@code writer} */
 	private void writeToFile(Writer writer, String content) throws IOException {
 		if (writer != null) {
 			writer.write(content);
@@ -122,6 +140,7 @@ public class Anonymize extends MainTask {
 		}
 	}
 	
+	/** Flushes and closes the provided {@code writer} */
 	private void closeWriter(Writer writer) throws IOException {
 		if (writer != null) {
 			writer.flush();
@@ -129,10 +148,50 @@ public class Anonymize extends MainTask {
 		}
 	}
 	
+	/** Returns {@code true} if there are instances left in the filter or the maximum
+	 *  number of instances has not been reached; {@code false} otherwise */
 	private boolean keepProcessing(long processedInstances, PrivacyFilter filter) {
 		return filter.hasMoreInstances() &&                          // as long as the stream has instances,
 				(maxInstancesOption.getValue() < 0 ||                //  process ALL instance in the stream
 				processedInstances < maxInstancesOption.getValue()); //  OR process up to a maximum
+	}
+	
+	/** Converts a {@code long} representing milliseconds to a {@code float} representing seconds */
+	private float millisToSeconds(long millis) {
+		return (millis/1000.0f);
+	}
+	
+	/** Returns the CSV file header for the throughput evaluation */
+	private String getThroughputCSVHeader() {
+		return THROUGHPUT_CSV_HEADER;
+	}
+	
+	private String getThroughputCSVRecord(long instances, long totalTime, int deltaInstances, long deltaTime) {
+		return String.format(THROUGHPUT_CSV_RECORD,
+				instances, millisToSeconds(totalTime), deltaInstances, millisToSeconds(deltaTime));
+	}
+	
+	/** Formats the multiline string that represents the report of the anonimization report */
+	private String getAnonymizationReport(String streamHeader,
+			boolean silencedAnonymization, boolean silencedEvaluation,
+			long anonymizedInstances, long runtimeMillis,
+			double disclosureRisk, double informationLoss) {
+		StringBuilder builder = new StringBuilder(1024);
+		builder.append("**** **** **** **** **** ANONYMIZATION TASK COMPLETED **** **** **** **** ****\n");
+		builder.append(String.format("Execution time: %.3f s\n", millisToSeconds(runtimeMillis)));
+		builder.append(anonymizedInstances);
+		builder.append(" instances have been anonymized from the stream with header:\n");
+		builder.append(streamHeader);
+		builder.append("\n");
+		if (!silencedAnonymization) {
+			builder.append("and have been stored in the file: " + arffFileOption.getFile().getPath() + "\n");
+		}
+		if (!silencedEvaluation) {
+			builder.append("Total disclosure risk:  " + String.format("%.12f", disclosureRisk) + "\n");
+			builder.append("Total information loss: " + String.format("%.12f", informationLoss) + "\n");
+		}
+		builder.append("**** **** **** **** **** **** **** **** **** **** **** **** **** **** **** ****\n");
+		return builder.toString();
 	}
 	
 	@Override
@@ -147,20 +206,25 @@ public class Anonymize extends MainTask {
 		Writer evaluationWriter = filter.isEvaluationEnabled() ? 
 				getWriterForFileOption(evaluationFileOption) : null;
 		Writer reportWriter = getWriterForFileOption(reportFileOption);
+		Writer throughputWriter = getWriterForFileOption(throughputEvaluationFileOption);
 		
 		try {
-			//write headers for both output files
+			//write headers for all output files
 			if (!suppressHeaderOption.isSet()) {
 				writeToFile(arffWriter, stream.getHeader().toString());
 			}
 			writeToFile(evaluationWriter, filter.getEvaluation().getEvaluationCSVHeader());
+			writeToFile(throughputWriter, getThroughputCSVHeader());
 			
 			//begin filtering
 			monitor.setCurrentActivityDescription(MONITOR_INITIAL_STATE);
-			long anonymizedInstances = 0;
+			long anonymizedInstances = 0; //total instance counter
+			long startTime = System.currentTimeMillis(); //total runtime counter
+			long prevThroughputTime = System.currentTimeMillis(); //time for the throughput evaluation
 			while (keepProcessing(anonymizedInstances, filter)) {
 				Instance instance = filter.nextInstance();
 				if (instance != null) {
+					//process the anonymized instance
 					anonymizedInstances++;
 					writeToFile(arffWriter, instance.toString());
 					
@@ -182,8 +246,25 @@ public class Anonymize extends MainTask {
 								String.format(MONITOR_UPDATE_STATE, anonymizedInstances));
 						}
 					}
+					//update throughput evaluation if needed
+					if (anonymizedInstances % throughputEvaluationUpdateRateOption.getValue() == 0) {
+						//gather data
+						long currThroughputTime = System.currentTimeMillis();
+						long totalTime = currThroughputTime - startTime;
+						long deltaTime = currThroughputTime - prevThroughputTime;
+						int deltaInstances = throughputEvaluationUpdateRateOption.getValue();
+						//write CSV record
+						writeToFile(throughputWriter, 
+									getThroughputCSVRecord(anonymizedInstances, totalTime, deltaInstances, deltaTime));
+						//update the previous time stamp
+						prevThroughputTime = currThroughputTime;
+					}
 				}
 			}
+			//calculate runtime
+			long endTime = System.currentTimeMillis();
+			long runtimeMillis = endTime - startTime;
+			
 			//get the necessary data for the report
 			double disclosureRisk = 0.0;
 			double informationLoss = 0.0;
@@ -199,9 +280,9 @@ public class Anonymize extends MainTask {
 					stream.getHeader() == null ?  "error: no stream header available" : stream.getHeader().toString(),
 					arffWriter == null ? true : false,
 					evaluationWriter == null ? true : false,
-					anonymizedInstances,
+					anonymizedInstances, runtimeMillis,
 					disclosureRisk, informationLoss
-				); 
+				);
 			
 			//write the report
 			writeToFile(reportWriter, report);
@@ -210,6 +291,7 @@ public class Anonymize extends MainTask {
 			closeWriter(arffWriter);
 			closeWriter(evaluationWriter);
 			closeWriter(reportWriter);
+			closeWriter(throughputWriter);
 			
 			//return the report
 			return report;
@@ -219,26 +301,4 @@ public class Anonymize extends MainTask {
 			throw new RuntimeException("An evaluation was requested, but the estimators were disabled", e);
 		}
 	}
-	
-	private String getAnonymizationReport(String streamHeader,
-			boolean silencedAnonymization, boolean silencedEvaluation,
-			long anonymizedInstances,
-			double disclosureRisk, double informationLoss) {
-		StringBuilder builder = new StringBuilder(1024);
-		builder.append("**** **** **** **** **** ANONYMIZATION TASK COMPLETED **** **** **** **** ****\n");
-		builder.append(anonymizedInstances);
-		builder.append(" instances have been anonymized from the stream with header:\n");
-		builder.append(streamHeader);
-		builder.append("\n");
-		if (!silencedAnonymization) {
-			builder.append("and have been stored in the file: " + arffFileOption.getFile().getPath() + "\n");
-		}
-		if (!silencedEvaluation) {
-			builder.append("Total disclosure risk:  " + String.format("%.12f", disclosureRisk) + "\n");
-			builder.append("Total information loss: " + String.format("%.12f", informationLoss) + "\n");
-		}
-		builder.append("**** **** **** **** **** **** **** **** **** **** **** **** **** **** **** ****\n");
-		return builder.toString();
-	}
-
 }
