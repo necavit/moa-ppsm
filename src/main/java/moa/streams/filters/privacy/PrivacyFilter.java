@@ -5,6 +5,7 @@ import java.io.Serializable;
 import moa.core.InstancesHeader;
 import moa.core.ObjectRepository;
 import moa.options.ClassOption;
+import moa.options.FlagOption;
 import moa.streams.filters.AbstractStreamFilter;
 import moa.streams.filters.privacy.estimators.disclosurerisk.BufferedIndividualRecordLinker;
 import moa.streams.filters.privacy.estimators.disclosurerisk.DisclosureRiskEstimator;
@@ -34,6 +35,11 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 	/** The estimator of the disclosure risk of the ouput stream of instances */
 	private DisclosureRiskEstimator disclosureRiskEstimator;
 	
+	/** The option for the ability to enable the performance of an evaluation concerning
+	 * Disclosure Risk and Information Loss by the {@code PrivacyFilter} */
+	public FlagOption evaluationEnabledOption = new FlagOption("evaluationEnabled",
+			'E', "If set, this flag option enables the calculation of the IL and DR metrics by the privacy filter.");
+	
 	/**
 	 * Builds a privacy filter with default estimators. ({@link SSEEstimator} and
 	 *  {@link BufferedIndividualRecordLinker}).
@@ -45,10 +51,12 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 	@Override
 	public void prepareForUseImpl(TaskMonitor monitor, ObjectRepository repository) {
 		//prepare the estimators of the filter
-		this.informationLossEstimator = 
-				(InformationLossEstimator) getPreparedClassOption(informationLossEstimatorOption);
-		this.disclosureRiskEstimator =
-				(DisclosureRiskEstimator) getPreparedClassOption(disclosureRiskEstimatorOption);
+		if (evaluationEnabledOption.isSet()) {
+			this.informationLossEstimator = 
+					(InformationLossEstimator) getPreparedClassOption(informationLossEstimatorOption);
+			this.disclosureRiskEstimator =
+					(DisclosureRiskEstimator) getPreparedClassOption(disclosureRiskEstimatorOption);
+		}
 		
 		//prepare the anonymization filter concrete implementation (subclasses)
 		prepareAnonymizationFilterForUse();
@@ -63,8 +71,10 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 	public Instance nextInstance() {
 		InstancePair instancePair = nextAnonymizedInstancePair();
 		if (instancePair != null) {
-			informationLossEstimator.performEstimationForInstances(instancePair);
-			disclosureRiskEstimator.performEstimationForInstances(instancePair);
+			if (evaluationEnabledOption.isSet()) {
+				informationLossEstimator.performEstimationForInstances(instancePair);
+				disclosureRiskEstimator.performEstimationForInstances(instancePair);
+			}
 			return instancePair.anonymizedInstance;
 		}
 		else {
@@ -74,63 +84,50 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 
 	@Override
 	protected void restartImpl() {
-		informationLossEstimator.restart();
-		disclosureRiskEstimator.restart();
+		if (evaluationEnabledOption.isSet()) {
+			informationLossEstimator.restart();
+			disclosureRiskEstimator.restart();
+		}
+		// call for the PrivacyFilter subclass to do the necessary
+		//  steps to restart the filter
 		restartFilter();
 	}
 	
-	public Evaluation getEvaluation() {
-		return new AnonymizationEvaluation(getCurrentDisclosureRisk(), 
-										   getIncrementalInformationLoss(), 
-										   getCurrentInformationLoss());
+	public PrivacyEvaluation getEvaluation() throws EvaluationNotEnabledException {
+		if (evaluationEnabledOption.isSet()) {
+			return new AnonymizationEvaluation(
+				disclosureRiskEstimator.getCurrentDisclosureRisk(), 
+				informationLossEstimator.getIncrementalInformationLoss(), 
+				informationLossEstimator.getCurrentInformationLoss()
+			);
+		}
+		else {
+			throw new EvaluationNotEnabledException("Evaluation is not enabled for this privacy filter.");
+		}
 	}
 	
 	/**
-	 * Retrieves the {@link DisclosureRiskEstimator} used in this filter. This
-	 * method can be useful if the estimator can be customized.
+	 * Retrieves the {@link DisclosureRiskEstimator} used in this filter or {@code null}
+	 * if the evaluation is not enabled for the filter. This method can be useful if the 
+	 * estimator can be customized.
 	 * 
-	 * @return the diclosure risk estimator being used in this filter
+	 * @return the diclosure risk estimator being used in this filter or {@code null}
+	 * if the evaluation is not enabled for the filter
 	 */
 	public DisclosureRiskEstimator getDisclosureRiskEstimator() {
 		return disclosureRiskEstimator;
 	}
 	
 	/**
-	 * Retrieves the {@link InformationLossEstimator} used in this filter. This
-	 * method can be useful if the estimator can be customized.
+	 * Retrieves the {@link InformationLossEstimator} used in this filter or {@code null}
+	 * if the evaluation is not enabled for the filter. This method can be useful if the 
+	 * estimator can be customized.
 	 * 
-	 * @return the information loss estimator being used in this filter
+	 * @return the information loss estimator being used in this filter or {@code null}
+	 * if the evaluation is not enabled for the filter
 	 */
 	public InformationLossEstimator getInformationLossEstimator() {
 		return informationLossEstimator;
-	}
-	
-	/**
-	 * Retrieves the current information loss estimation, as given by the {@link #informationLossEstimator}.
-	 * 
-	 * @return the current total information loss estimation
-	 */
-	public double getCurrentInformationLoss() {
-		return informationLossEstimator.getCurrentInformationLoss();
-	}
-	
-	/**
-	 * Retrieves the last increment in the information loss estimation, as given by 
-	 * the {@link #informationLossEstimator}.
-	 * 
-	 * @return the last increment in the information loss estimation
-	 */
-	public double getIncrementalInformationLoss() {
-		return informationLossEstimator.getIncrementalInformationLoss();
-	}
-
-	/**
-	 * Retrieves the current disclosure risk estimation, as given by {@link #informationLossEstimator}.
-	 * 
-	 * @return the current estimation for the disclosure risk metric
-	 */
-	public double getCurrentDisclosureRisk() {
-		return disclosureRiskEstimator.getCurrentDisclosureRisk();
 	}
 	
 	/**
@@ -155,6 +152,20 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 	 */
 	public void setInformationLossEstimator(InformationLossEstimator informationLossEstimator) {
 		this.informationLossEstimator = informationLossEstimator;
+	}
+	
+	public boolean isEvaluationEnabled() {
+		return evaluationEnabledOption.isSet();
+	}
+	
+	public class EvaluationNotEnabledException extends Exception {
+		private static final long serialVersionUID = 9000383025619373897L;
+		public EvaluationNotEnabledException() {
+			super();
+		}
+		public EvaluationNotEnabledException(String message) {
+			super(message);
+		}
 	}
 	
 }
