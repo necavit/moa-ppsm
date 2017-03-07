@@ -38,43 +38,38 @@ public class Anonymize extends MainTask {
 	public ClassOption filterOption = new ClassOption("filter", 'f',
             "Privacy filter to be applied.", PrivacyFilter.class, 
             "noiseaddition.NoiseAdditionFilter -c 0.0 -a 0.25");
-	private PrivacyFilter filter;
 	
 	/* **** Stream options **** */
 	public ClassOption streamOption = new ClassOption("stream", 's',
             "Stream to be filtered.", InstanceStream.class,
             "generators.RandomRBFGenerator");
-	private InstanceStream stream;
 	
 	public IntOption maxInstancesOption = new IntOption("maxInstances", 'm',
             "Maximum number of instances to process. If set to -1, keep processing until the" +
             " input stream runs out of instance (no maximum is set).", -1, -1, Integer.MAX_VALUE);
 	
 	/* **** Evaluation options **** */
-	public FlagOption silenceEvaluationOption = new FlagOption("silenceEvaluation", 'q', 
-			"Disable dumping evaluation output to a file.");
-	
 	public IntOption evaluationUpdateRateOption = new IntOption("evaluationUpdateRate", 'u',
 			"Number of instances to skip between anonymization evaluation updates.", 100, 1, Integer.MAX_VALUE);
 
     public FileOption evaluationFileOption = new FileOption("evaluationFile", 'e', 
-    		"Destination CSV file for the anonymization process evaluation.", "evaluation", "csv", true);
+    		"Destination CSV file for the anonymization process evaluation.", null, "csv", true);
     
     /* **** Anonymized output options **** */
-    public FlagOption silenceAnonymizationOption = new FlagOption("silenceAnonymization", 'Q', 
-			"Disable dumping anonymization output to a file.");	
-    
     public FileOption arffFileOption = new FileOption("arffFile", 'a',
             "Destination ARFF file for the anonymized dataset.", "anonymized", "arff", true);
     
     public FlagOption suppressHeaderOption = new FlagOption("suppressHeader",
             'h', "Suppress header from output.");
     
+    /* **** Report plaintext file options **** */
+    public FileOption reportFileOption = new FileOption("reportFile", 'r', 
+    		"Destination plain text file for the anonymization report.", null, "txt", true);
+    
     /* **** **** **** **** **** **** **** **** **** */
     
     public Anonymize() {
-    	outputFileOption = new FileOption("anonymizationResultFile", 'O',
-    		"File to save the final report of the anonymization process.", null, null, true);
+    	// empty constructor
 	}
     
 	@Override
@@ -87,75 +82,43 @@ public class Anonymize extends MainTask {
 		return String.class;
 	}
 	
-	private Writer getArffOutputFile() {
-		File arffFile = null;
-		//check whether the anonymization output is silenced
-		if (!silenceAnonymizationOption.isSet()) {
-			//get a writable file reference
-			arffFile = getFile(arffFileOption);
-			try {
-				return new BufferedWriter(new FileWriter(arffFile));
-			} catch (IOException e) {
-				throw new RuntimeException("Failed to open the anonymization output file.", e);
-			}
-		}
-		return null;
-	}
-	
-	private Writer getEvaluationOutputFile() {
-		File evaluationFile = null;
-		//check whether the evaluation output is silenced
-		if (!silenceEvaluationOption.isSet()
-				&& filter.isEvaluationEnabled()) {
-			//get a writable file reference
-			evaluationFile = getFile(evaluationFileOption);
-			try {
-				return new BufferedWriter(new FileWriter(evaluationFile));
-			} catch (IOException e) {
-				throw new RuntimeException("Failed to open the evaluation output file.", e);
-			}
-		}
-		return null;
-	}
-	
-	private File getFile(FileOption fileOption) {
+	private File getFileWithExtension(FileOption fileOption) {
 		File file = fileOption.getFile();
-		String filePath = file.getPath();
-		if (!filePath.contains(fileOption.getDefaultFileExtension())) {
-			filePath = filePath + "." + fileOption.getDefaultFileExtension();
-			file = new File(filePath);
+		if (file != null) {
+			String filePath = file.getPath();
+			if (!filePath.contains(fileOption.getDefaultFileExtension())) {
+				filePath = filePath + "." + fileOption.getDefaultFileExtension();
+				file = new File(filePath);
+			}
 		}
 		return file;
 	}
 	
-	private void writeArffHeader(Writer arffWriter, InstanceStream stream) throws IOException {
-		if (!silenceAnonymizationOption.isSet() && !suppressHeaderOption.isSet()) {
-			arffWriter.write(stream.getHeader().toString());
-            arffWriter.write("\n");
+	/**
+	 * Creates a writer for a file that is specified by the provided file option. If there is no
+	 * specified file in the option (the default file is {@code null}), then no writer is created
+	 * and {@code null} is returned.
+	 * 
+	 * @param fileOption the option in which the file is specified
+	 * @return a writer to the file or {@code null} 
+	 */
+	private Writer getWriterForFileOption(FileOption fileOption) {
+		File file = getFileWithExtension(fileOption);
+		if (file != null) {
+			try {
+				return new BufferedWriter(new FileWriter(file));
+			} catch (IOException e) {
+				String message = String.format("Failed to open file: %s", file.getName());
+				throw new RuntimeException(message, e);
+			}
 		}
+		else return null;
 	}
 	
-	private void writeEvaluationHeader(Writer evaluationWriter, PrivacyFilter filter)
-											throws IOException, EvaluationNotEnabledException {
-		if (!silenceEvaluationOption.isSet()
-				&& filter.isEvaluationEnabled()) {
-			evaluationWriter.write(filter.getEvaluation().getEvaluationCSVHeader());
-			evaluationWriter.write("\n");
-		}
-	}
-	
-	private void writeAnonymizedInstance(Writer arffWriter, Instance instance) throws IOException {
-		if (!silenceAnonymizationOption.isSet()) {
-			arffWriter.write(instance.toString());
-			arffWriter.write("\n");
-		}
-	}
-	
-	private void writeEvaluation(Writer evaluationWriter, PrivacyEvaluation evaluation) throws IOException {
-		if (!silenceEvaluationOption.isSet()
-				&& filter.isEvaluationEnabled()) {
-			evaluationWriter.write(evaluation.getEvaluationCSVRecord());
-			evaluationWriter.write("\n");
+	private void writeToFile(Writer writer, String content) throws IOException {
+		if (writer != null) {
+			writer.write(content);
+			writer.write("\n");
 		}
 	}
 	
@@ -175,18 +138,22 @@ public class Anonymize extends MainTask {
 	@Override
 	protected Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
 		//prepare the stream and the filter
-		this.stream = (InstanceStream) getPreparedClassOption(streamOption);
-		this.filter = (PrivacyFilter) getPreparedClassOption(filterOption);
+		InstanceStream stream = (InstanceStream) getPreparedClassOption(streamOption);
+		PrivacyFilter filter = (PrivacyFilter) getPreparedClassOption(filterOption);
 		filter.setInputStream(stream);
 		
 		//prepare the potential necessary files and variables
-		Writer arffWriter = getArffOutputFile();
-		Writer evaluationWriter = getEvaluationOutputFile();
+		Writer arffWriter = getWriterForFileOption(arffFileOption);
+		Writer evaluationWriter = filter.isEvaluationEnabled() ? 
+				getWriterForFileOption(evaluationFileOption) : null;
+		Writer reportWriter = getWriterForFileOption(reportFileOption);
 		
 		try {
 			//write headers for both output files
-			writeArffHeader(arffWriter, stream);
-			writeEvaluationHeader(evaluationWriter, filter);
+			if (!suppressHeaderOption.isSet()) {
+				writeToFile(arffWriter, stream.getHeader().toString());
+			}
+			writeToFile(evaluationWriter, filter.getEvaluation().getEvaluationCSVHeader());
 			
 			//begin filtering
 			monitor.setCurrentActivityDescription(MONITOR_INITIAL_STATE);
@@ -195,14 +162,14 @@ public class Anonymize extends MainTask {
 				Instance instance = filter.nextInstance();
 				if (instance != null) {
 					anonymizedInstances++;
-					writeAnonymizedInstance(arffWriter, instance);
+					writeToFile(arffWriter, instance.toString());
 					
 					//update evaluation if needed (check the evaluation update rate)
 					if (anonymizedInstances % evaluationUpdateRateOption.getValue() == 0) {
 						//check whether the evaluation is enabled to avoid exceptions
 						if (filter.isEvaluationEnabled()) {
 							PrivacyEvaluation evaluation = filter.getEvaluation();
-							writeEvaluation(evaluationWriter, evaluation);
+							writeToFile(evaluationWriter, evaluation.getEvaluationCSVRecord());
 							monitor.setCurrentActivityDescription(
 								String.format(MONITOR_EVALUATION_STATE, anonymizedInstances,
 										evaluation.getDisclosureRisk(),
@@ -217,11 +184,6 @@ public class Anonymize extends MainTask {
 					}
 				}
 			}
-			
-			//flush and close the writer streams
-			closeWriter(arffWriter);
-			closeWriter(evaluationWriter);
-			
 			//get the necessary data for the report
 			double disclosureRisk = 0.0;
 			double informationLoss = 0.0;
@@ -230,10 +192,27 @@ public class Anonymize extends MainTask {
 				disclosureRisk = finalEvaluation.getDisclosureRisk();
 				informationLoss = finalEvaluation.getInformationLoss();
 			}
-			//return report
-			return getAnonymizationReport(stream, filter, 
+			
+			//build the report
+			String report = 
+				getAnonymizationReport(
+					stream.getHeader() == null ?  "error: no stream header available" : stream.getHeader().toString(),
+					arffWriter == null ? true : false,
+					evaluationWriter == null ? true : false,
 					anonymizedInstances,
-					disclosureRisk,	informationLoss);
+					disclosureRisk, informationLoss
+				); 
+			
+			//write the report
+			writeToFile(reportWriter, report);
+			
+			//flush and close the writer streams
+			closeWriter(arffWriter);
+			closeWriter(evaluationWriter);
+			closeWriter(reportWriter);
+			
+			//return the report
+			return report;
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to complete the task.", e);
 		} catch (EvaluationNotEnabledException e) {
@@ -241,20 +220,20 @@ public class Anonymize extends MainTask {
 		}
 	}
 	
-	private String getAnonymizationReport(InstanceStream stream, PrivacyFilter filter,
+	private String getAnonymizationReport(String streamHeader,
+			boolean silencedAnonymization, boolean silencedEvaluation,
 			long anonymizedInstances,
 			double disclosureRisk, double informationLoss) {
 		StringBuilder builder = new StringBuilder(1024);
 		builder.append("**** **** **** **** **** ANONYMIZATION TASK COMPLETED **** **** **** **** ****\n");
 		builder.append(anonymizedInstances);
 		builder.append(" instances have been anonymized from the stream with header:\n");
-		builder.append(stream.getHeader() == null ? "error: no stream header available" : stream.getHeader().toString());
+		builder.append(streamHeader);
 		builder.append("\n");
-		if (!silenceAnonymizationOption.isSet()) {
+		if (!silencedAnonymization) {
 			builder.append("and have been stored in the file: " + arffFileOption.getFile().getPath() + "\n");
 		}
-		if (!silenceEvaluationOption.isSet()
-				&& filter.isEvaluationEnabled()) {
+		if (!silencedEvaluation) {
 			builder.append("Total disclosure risk:  " + String.format("%.12f", disclosureRisk) + "\n");
 			builder.append("Total information loss: " + String.format("%.12f", informationLoss) + "\n");
 		}
