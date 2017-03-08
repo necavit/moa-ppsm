@@ -208,6 +208,15 @@ public class Anonymize extends MainTask {
 		PrivacyFilter filter = (PrivacyFilter) getPreparedClassOption(filterOption);
 		filter.setInputStream(stream);
 		
+		//check if an evaluation was requested and force the filter to enable
+		// the DR and IL estimators, even if the user forgot to enable it in the
+		// filter specification (-E option) as well as in the task specification,
+		// through the "-e" option (specifying the evaluation file)
+		if (evaluationFileOption.getFile() != null) {
+			filter.evaluationEnabledOption.set();
+			filter.restart();
+		}
+		
 		//prepare the potential necessary files and variables
 		Writer arffWriter = getWriterForFileOption(arffFileOption);
 		Writer evaluationWriter = filter.isEvaluationEnabled() ? 

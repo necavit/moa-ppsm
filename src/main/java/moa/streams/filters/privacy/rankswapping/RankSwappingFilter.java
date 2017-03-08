@@ -42,7 +42,7 @@ public class RankSwappingFilter extends PrivacyFilter {
 	}
 
 	@Override
-	public void restartFilter() {
+	public void restartAnonymizationFilter() {
 		prepareAnonymizationFilterForUse();
 	}
 

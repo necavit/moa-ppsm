@@ -78,7 +78,7 @@ public class NoiseAdditionFilter extends PrivacyFilter {
 	}
 	
 	@Override
-	public void restartFilter() {
+	public void restartAnonymizationFilter() {
 		prepareAnonymizationFilterForUse();
 	}
 	

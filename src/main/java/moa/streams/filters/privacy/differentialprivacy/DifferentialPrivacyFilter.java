@@ -47,7 +47,7 @@ public class DifferentialPrivacyFilter extends PrivacyFilter {
 	}
 
 	@Override
-	public void restartFilter() {
+	public void restartAnonymizationFilter() {
 		prepareAnonymizationFilterForUse();
 	}
 	

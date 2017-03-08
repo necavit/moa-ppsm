@@ -14,7 +14,7 @@ import moa.streams.filters.privacy.estimators.informationloss.SSEEstimator;
 import moa.tasks.TaskMonitor;
 import weka.core.Instance;
 
-public abstract class PrivacyFilter extends AbstractStreamFilter implements AnonymizationFilter {
+public abstract class PrivacyFilter extends AbstractStreamFilter {
 	
 	/** Please see {@link Serializable} */
 	private static final long serialVersionUID = 5485907750792490539L;
@@ -85,14 +85,34 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 	@Override
 	protected void restartImpl() {
 		if (evaluationEnabledOption.isSet()) {
-			informationLossEstimator.restart();
-			disclosureRiskEstimator.restart();
+			//check if the estimators are null - an external restart because of the
+			// enabling of the metrics feature could cause a crash due to a NullPointerException
+			if (informationLossEstimator == null) {
+				informationLossEstimator = 
+						(InformationLossEstimator) getPreparedClassOption(informationLossEstimatorOption);
+			} else {
+				informationLossEstimator.restart();
+			}
+			if (disclosureRiskEstimator == null) { 
+				disclosureRiskEstimator = 
+						(DisclosureRiskEstimator) getPreparedClassOption(disclosureRiskEstimatorOption);
+			} else {
+				disclosureRiskEstimator.restart();
+			}
 		}
 		// call for the PrivacyFilter subclass to do the necessary
 		//  steps to restart the filter
-		restartFilter();
+		restartAnonymizationFilter();
 	}
 	
+	/**
+	 * If the Disclosure Risk (DR) and Information Loss (IL) evaluation is enabled, through
+	 * {@link #isEvaluationEnabled()}, the corresponding DR and IL estimators are requested
+	 * to perform an evaluation over the last anonymized instance.
+	 * 
+	 * @return a {@link PrivacyEvaluation} containing the necessary information
+	 * @throws EvaluationNotEnabledException if the DR and IL evaluation is not enabled
+	 */
 	public PrivacyEvaluation getEvaluation() throws EvaluationNotEnabledException {
 		if (evaluationEnabledOption.isSet()) {
 			return new AnonymizationEvaluation(
@@ -108,11 +128,11 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 	
 	/**
 	 * Retrieves the {@link DisclosureRiskEstimator} used in this filter or {@code null}
-	 * if the evaluation is not enabled for the filter. This method can be useful if the 
-	 * estimator can be customized.
+	 * if the evaluation is not enabled for the filter (see {@link #isEvaluationEnabled()}). 
+	 * This method can be useful if the estimator can be customized.
 	 * 
 	 * @return the diclosure risk estimator being used in this filter or {@code null}
-	 * if the evaluation is not enabled for the filter
+	 * if the evaluation is not enabled for the filter (see {@link #isEvaluationEnabled()})
 	 */
 	public DisclosureRiskEstimator getDisclosureRiskEstimator() {
 		return disclosureRiskEstimator;
@@ -120,11 +140,11 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 	
 	/**
 	 * Retrieves the {@link InformationLossEstimator} used in this filter or {@code null}
-	 * if the evaluation is not enabled for the filter. This method can be useful if the 
-	 * estimator can be customized.
+	 * if the evaluation is not enabled for the filter (see {@link #isEvaluationEnabled()}).
+	 * This method can be useful if the estimator can be customized.
 	 * 
 	 * @return the information loss estimator being used in this filter or {@code null}
-	 * if the evaluation is not enabled for the filter
+	 * if the evaluation is not enabled for the filter (see {@link #isEvaluationEnabled()})
 	 */
 	public InformationLossEstimator getInformationLossEstimator() {
 		return informationLossEstimator;
@@ -154,10 +174,21 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 		this.informationLossEstimator = informationLossEstimator;
 	}
 	
+	/**
+	 * Utility function to test whether or not the Disclosure Risk (DR) and Information Loss (IL)
+	 * estimation feature is enabled for this filter. It is equivalent to calling:
+	 * {@code filter.evaluationEnabledOption.isSet()}
+	 * @return {@code true} if the feature is enabled, {@code false} otherwise
+	 */
 	public boolean isEvaluationEnabled() {
 		return evaluationEnabledOption.isSet();
 	}
 	
+	/**
+	 * Exception class representing an error that is triggered when a user of a {@link PrivacyFilter}
+	 * requests for a {@link PrivacyEvaluation} while not having enabled the feature
+	 * (see {@link #isEvaluationEnabled()}).
+	 */
 	public class EvaluationNotEnabledException extends Exception {
 		private static final long serialVersionUID = 9000383025619373897L;
 		public EvaluationNotEnabledException() {
@@ -167,5 +198,21 @@ public abstract class PrivacyFilter extends AbstractStreamFilter implements Anon
 			super(message);
 		}
 	}
+	
+	/**
+	 * Anonymizes the next instance in the stream and returns it along with the original
+	 * instance, for evaluation purposes. Be aware that the returned object might be
+	 * {@code null} if the filter uses a buffered strategy.
+	 * 
+	 * @return the pair of anonymized and original instances or {@code null} if the filter
+	 * uses a buffered strategy and the buffer is not yet full
+	 */
+	public abstract InstancePair nextAnonymizedInstancePair();
+	
+	/** Hook method to allow an anonymization filter to prepare for its future use. */
+	public abstract void prepareAnonymizationFilterForUse();
+	
+	/** Hook method to allow an anonymization filter to be restarted to be used in the future. */
+	public abstract void restartAnonymizationFilter();
 	
 }

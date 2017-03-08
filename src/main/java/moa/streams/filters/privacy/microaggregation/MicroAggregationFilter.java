@@ -56,7 +56,7 @@ public class MicroAggregationFilter extends PrivacyFilter {
 	}
 
 	@Override
-	public void restartFilter() {
+	public void restartAnonymizationFilter() {
 		prepareAnonymizationFilterForUse();
 	}
 	
