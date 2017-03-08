@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 
 import moa.core.ObjectRepository;
 import moa.options.ClassOption;
@@ -32,10 +34,10 @@ public class Anonymize extends MainTask {
 
 	private static final String MONITOR_UPDATE_STATE = "i: %d";
 
-	private static final String THROUGHPUT_CSV_HEADER = "Instances,TotalTime[s],"
-															+ "IncrInstances,IncrTime[s],Throughput[ins/s]";
+	private static final String THROUGHPUT_CSV_HEADER = "Instances,TotalTime[s],IncrInstances,"
+														+ "IncrUserTime[ms],IncrTime[s],Throughput[ins/s]";
 	
-	private static final String THROUGHPUT_CSV_RECORD = "%d,%.3f,%d,%.3f,%.2f";
+	private static final String THROUGHPUT_CSV_RECORD = "%d,%.3f,%d,%.3f,%.3f,%.2f";
 	
 	/* **** **** **** TASK OPTIONS **** **** **** */
 	
@@ -170,12 +172,13 @@ public class Anonymize extends MainTask {
 	}
 	
 	private String getThroughputCSVRecord(long instances, long totalTimeMillis, 
-										  int deltaInstances, long deltaTimeMillis) {
+										  int deltaInstances, long deltaTimeMillis, long deltaUserTime) {
 		float totalSeconds = millisToSeconds(totalTimeMillis);
 		float deltaSeconds = millisToSeconds(deltaTimeMillis);
+		float deltaUserMillis = millisToSeconds(deltaUserTime); //nano / 1000 = millis
 		float throughput = deltaInstances/deltaSeconds;
 		return String.format(THROUGHPUT_CSV_RECORD,
-				instances, totalSeconds, deltaInstances, deltaSeconds, throughput);
+				instances, totalSeconds, deltaInstances, deltaUserMillis, deltaSeconds, throughput);
 	}
 	
 	/** Formats the multiline string that represents the report of the anonimization report */
@@ -239,6 +242,7 @@ public class Anonymize extends MainTask {
 			long anonymizedInstances = 0; //total instance counter
 			long startTime = System.currentTimeMillis(); //total runtime counter
 			long prevThroughputTime = System.currentTimeMillis(); //time for the throughput evaluation
+			long prevThroughputUserTime = getUserTime(); //user time instad of wall clock time
 			while (keepProcessing(anonymizedInstances, filter)) {
 				Instance instance = filter.nextInstance();
 				if (instance != null) {
@@ -267,15 +271,18 @@ public class Anonymize extends MainTask {
 					//update throughput evaluation if needed
 					if (anonymizedInstances % throughputEvaluationUpdateRateOption.getValue() == 0) {
 						//gather data
+						long currThroughputUserTime = getUserTime();
 						long currThroughputTime = System.currentTimeMillis();
 						long totalTime = currThroughputTime - startTime;
 						long deltaTime = currThroughputTime - prevThroughputTime;
+						long deltaUserTime = currThroughputUserTime - prevThroughputUserTime;
 						int deltaInstances = throughputEvaluationUpdateRateOption.getValue();
 						//write CSV record
-						writeToFile(throughputWriter, 
-									getThroughputCSVRecord(anonymizedInstances, totalTime, deltaInstances, deltaTime));
+						writeToFile(throughputWriter, getThroughputCSVRecord(anonymizedInstances, totalTime, 
+																			 deltaInstances, deltaTime, deltaUserTime));
 						//update the previous time stamp
 						prevThroughputTime = currThroughputTime;
+						prevThroughputUserTime = currThroughputUserTime;
 					}
 				}
 			}
@@ -318,5 +325,15 @@ public class Anonymize extends MainTask {
 		} catch (EvaluationNotEnabledException e) {
 			throw new RuntimeException("An evaluation was requested, but the estimators were disabled", e);
 		}
+	}
+	
+	/** Get user time in nanoseconds.
+	 * (credit goes for
+	 * {@link http://nadeausoftware.com/articles/2008/03/java_tip_how_get_cpu_and_user_time_benchmarking#AppendixTimesandlackofnanosecondaccuracy})
+	 * */
+	public long getUserTime() {
+	    ThreadMXBean bean = ManagementFactory.getThreadMXBean( );
+	    return bean.isCurrentThreadCpuTimeSupported() ?
+	        bean.getCurrentThreadUserTime() : 0L;
 	}
 }
