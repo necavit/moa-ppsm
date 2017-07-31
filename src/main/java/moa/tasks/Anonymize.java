@@ -6,6 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 
+import moa.core.InstancesHeader;
 import moa.core.ObjectRepository;
 import moa.options.ClassOption;
 import moa.options.FileOption;
@@ -71,12 +72,15 @@ public class Anonymize extends MainTask {
     public FileOption arffFileOption = new FileOption("arffFile", 'a',
             "Destination ARFF file for the anonymized dataset.", null, "arff", true);
     
-    public FlagOption suppressHeaderOption = new FlagOption("suppressHeader",
-            'h', "Suppress header from output.");
+    public FlagOption suppressHeaderOption = new FlagOption("suppressHeader", 'h', 
+    		"Suppress header from output.");
     
     /* **** Report plaintext file options **** */
     public FileOption reportFileOption = new FileOption("reportFile", 'r', 
     		"Destination plain text file for the anonymization report.", null, "txt", true);
+    
+    public FlagOption summarizeReportOption = new FlagOption("summarizeReportOption", 'z', 
+    		"Turns the anonymization report into a summary, that can be easily transformed into a CSV record");
     
     /* **** **** **** **** **** **** **** **** **** */
     
@@ -179,28 +183,54 @@ public class Anonymize extends MainTask {
 	}
 	
 	/** Formats the multiline string that represents the report of the anonimization report */
-	private String getAnonymizationReport(String streamHeader,
+	private String getAnonymizationReport(InstancesHeader instancesHeader,
 			boolean silencedAnonymization, boolean silencedEvaluation,
 			long anonymizedInstances, long runtimeMillis,
 			double disclosureRisk, double informationLoss) {
+		if (summarizeReportOption.isSet()) {
+			return getSummarizedReport(silencedEvaluation, anonymizedInstances, 
+					runtimeMillis, disclosureRisk, informationLoss);
+		}
+		else {
+			String header = instancesHeader.toString();
+			return getFullReport(header, silencedAnonymization, silencedEvaluation, anonymizedInstances, 
+					runtimeMillis, disclosureRisk, informationLoss);
+		}
+	}
+	
+	/** Formats a full-fledged report */
+	private String getFullReport(String streamHeader, boolean silencedAnonymization, boolean silencedEvaluation, 
+			long anonymizedInstances, long runtimeMillis, double disclosureRisk, double informationLoss) {
 		StringBuilder builder = new StringBuilder(1024);
-		builder.append("**** **** **** **** **** ANONYMIZATION TASK COMPLETED **** **** **** **** ****\n");
-		builder.append(String.format("Execution time: %.3f s\n", millisToSeconds(runtimeMillis)));
-		builder.append(anonymizedInstances);
-		builder.append(" instances have been anonymized from the stream with header:\n");
-		builder.append(streamHeader);
-		builder.append("\n");
+		builder.append("**** **** **** **** **** ANONYMIZATION TASK COMPLETED **** **** **** **** ****\n")
+			   .append(String.format("Execution time: %.3f s\n", millisToSeconds(runtimeMillis)))
+			   .append(anonymizedInstances)
+			   .append(" instances have been anonymized from the stream with header:\n")
+			   .append(streamHeader)
+			   .append("\n");
 		if (!silencedAnonymization) {
 			builder.append("and have been stored in the file: " + arffFileOption.getFile().getPath() + "\n");
 		}
 		if (!silencedEvaluation) {
-			builder.append("Total disclosure risk:  " + String.format("%.12f", disclosureRisk) + "\n");
-			builder.append("Total information loss: " + String.format("%.12f", informationLoss) + "\n");
+			builder.append("Total disclosure risk:  " + String.format("%.12f", disclosureRisk) + "\n")
+				   .append("Total information loss: " + String.format("%.12f", informationLoss) + "\n");
 		}
 		builder.append("**** **** **** **** **** **** **** **** **** **** **** **** **** **** **** ****\n");
 		return builder.toString();
 	}
 	
+	/** Formats a report to be easily parsed  */
+	private String getSummarizedReport(boolean silencedEvaluation,
+			long anonymizedInstances, long runtimeMillis, double disclosureRisk, double informationLoss) {
+		StringBuilder builder = new StringBuilder(1024);
+		builder.append("csvhead,Instances,TotalTime[s]")
+			   .append(silencedEvaluation ? "\n" : ",DR,IL\n")
+			   .append("csv,")
+			   .append(String.format("%d,%.3f", anonymizedInstances, millisToSeconds(runtimeMillis)))
+			   .append(silencedEvaluation ? "" : String.format(",%.3f,%.2f", disclosureRisk, informationLoss));
+		return builder.toString();
+	}
+
 	@Override
 	protected Object doMainTask(TaskMonitor monitor, ObjectRepository repository) {
 		//prepare the stream and the filter
@@ -295,7 +325,7 @@ public class Anonymize extends MainTask {
 			//build the report
 			String report = 
 				getAnonymizationReport(
-					stream.getHeader() == null ?  "error: no stream header available" : stream.getHeader().toString(),
+					stream.getHeader(),
 					arffWriter == null ? true : false,
 					evaluationWriter == null ? true : false,
 					anonymizedInstances, runtimeMillis,

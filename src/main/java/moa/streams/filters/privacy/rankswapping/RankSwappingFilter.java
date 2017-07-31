@@ -85,7 +85,7 @@ public class RankSwappingFilter extends PrivacyFilter {
 			instancesBuffer.add(originalInstance);
 			anonymizedInstancesBuffer.add(anonymizableInstance);
 			Vector<Boolean> swapped = new Vector<Boolean>(originalInstance.numAttributes() - 1);
-			for (int i = 0; i < originalInstance.numAttributes() - 1; ++i) {
+			for (int i = 0; i < originalInstance.numAttributes(); ++i) {
 				swapped.add(false);
 			}
 			alreadySwappedValue.add(swapped);
